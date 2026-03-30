@@ -1,10 +1,21 @@
+using Microsoft.EntityFrameworkCore;
+using NoteManagementAPI.Infrastructure;
+using NoteManagementAPI.Repositories;
+using NoteManagementAPI.Repositories.Interfaces;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Configure Entity Framework Core with SQL Server
+builder.Services.AddDbContext<NoteDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<INoteRepository, NoteRepository>();
 
 var app = builder.Build();
 
