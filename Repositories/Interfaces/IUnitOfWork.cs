@@ -2,7 +2,7 @@
 {
     public interface IUnitOfWork : IDisposable
     {
-        INoteRepository _noteRepository { get; }
+        INoteRepository NoteRepository { get; }
         Task<int> SaveChangesAsync();
     }
 }

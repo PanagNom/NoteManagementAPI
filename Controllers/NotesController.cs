@@ -19,7 +19,7 @@ namespace NoteManagementAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Note>?>> GetAll()
         {
-            return Ok(await _unitOfWork._noteRepository.GetAll());
+            return Ok(await _unitOfWork.NoteRepository.GetAll());
         }
 
         [HttpGet("{id:int}")]
@@ -30,7 +30,7 @@ namespace NoteManagementAPI.Controllers
                 return BadRequest("Id must be greater than 0");
             }
 
-            Note? retrievedNote = await _unitOfWork._noteRepository.Get(id);
+            Note? retrievedNote = await _unitOfWork.NoteRepository.Get(id);
 
             if (retrievedNote == null)
             {
@@ -43,7 +43,7 @@ namespace NoteManagementAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Note>> Create(Note note)
         {
-            await _unitOfWork._noteRepository.Create(note);
+            await _unitOfWork.NoteRepository.Create(note);
             await _unitOfWork.SaveChangesAsync();
 
             return CreatedAtAction(nameof(Get), new { Id = note.Id }, note);
@@ -57,7 +57,7 @@ namespace NoteManagementAPI.Controllers
                 return BadRequest("Id in the URL must match Id in the body");
             }
 
-            await _unitOfWork._noteRepository.Update(note);
+            _unitOfWork.NoteRepository.Update(note);
 
             try
             {
@@ -66,7 +66,7 @@ namespace NoteManagementAPI.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!await _unitOfWork._noteRepository.Exists(id))
+                if (!await _unitOfWork.NoteRepository.Exists(id))
                 {
                     return NotFound();
                 }
@@ -84,7 +84,7 @@ namespace NoteManagementAPI.Controllers
         {
             try
             {
-                await _unitOfWork._noteRepository.Delete(id);
+                await _unitOfWork.NoteRepository.Delete(id);
 
             }
             catch (Exception)

@@ -9,7 +9,7 @@ namespace NoteManagementAPI.Repositories.Interfaces
         Task<IEnumerable<Note>?> GetAll();
         Task<bool> Exists(int Id);
         Task Create(Note noteToCreate);
-        Task Update(Note noteToUpdate);
+        void Update(Note noteToUpdate);
         Task Delete(int Id);
     }
 }

@@ -5,13 +5,13 @@ namespace NoteManagementAPI.Repositories
 {
     public class UnitOfWork : IUnitOfWork
     {
-        public INoteRepository _noteRepository { get; }
+        public INoteRepository NoteRepository { get; }
         private readonly NoteDbContext _context;
 
         public UnitOfWork(NoteDbContext context, INoteRepository noteRepository)
         {
             _context = context;
-            _noteRepository = noteRepository;
+            NoteRepository = noteRepository;
         }
         public void Dispose()
         {

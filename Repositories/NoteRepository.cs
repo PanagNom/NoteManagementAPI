@@ -27,10 +27,10 @@ namespace NoteManagementAPI.Repositories
 
         public async Task Create(Note noteToCreate)
         {
-            var note = await _context.Notes.AddAsync(noteToCreate);
+            await _context.Notes.AddAsync(noteToCreate);
         }
 
-        public async Task Update(Note noteToUpdate)
+        public void Update(Note noteToUpdate)
         {
             _context.Notes.Update(noteToUpdate);
         }

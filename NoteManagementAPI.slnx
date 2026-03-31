@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="../NoteManagment.Tests/NoteManagment.Tests.csproj" Id="6fe6d83b-7e87-4da2-ac85-466a8cddb9e6" />
   <Project Path="NoteManagementAPI.csproj" />
 </Solution>
