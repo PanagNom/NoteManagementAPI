@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using NoteManagementAPI.DTOs;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
 
@@ -10,34 +9,92 @@ namespace NoteManagementAPI.Controllers
     [ApiController]
     public class NotesController : ControllerBase
     {
-        private readonly INoteRepository _noteRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public NotesController(INoteRepository noteRepository)
+        public NotesController(IUnitOfWork unitOfWork)
         {
-            _noteRepository = noteRepository;
+            _unitOfWork = unitOfWork;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<NoteDTO>?>> GetAll()
+        public async Task<ActionResult<IEnumerable<Note>?>> GetAll()
         {
-            return Ok(await _noteRepository.GetAll());
+            return Ok(await _unitOfWork._noteRepository.GetAll());
         }
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<NoteDTO?>> Get(int Id)
+        public async Task<ActionResult<Note>> Get(int id)
         {
-            if (Id < 1)
+            if (id < 1)
             {
                 return BadRequest("Id must be greater than 0");
             }
-            return Ok(await _noteRepository.Get(Id));
+
+            Note? retrievedNote = await _unitOfWork._noteRepository.Get(id);
+
+            if (retrievedNote == null)
+            {
+                return NotFound();
+            }
+
+            return retrievedNote;
         }
 
         [HttpPost]
-        public async Task<bool> Create(Note note)
+        public async Task<ActionResult<Note>> Create(Note note)
         {
-            await _noteRepository.Create(note);
-            return true;
+            await _unitOfWork._noteRepository.Create(note);
+            await _unitOfWork.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(Get), new { Id = note.Id }, note);
+        }
+
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Put(int id, Note note)
+        {
+            if (id != note.Id)
+            {
+                return BadRequest("Id in the URL must match Id in the body");
+            }
+
+            await _unitOfWork._noteRepository.Update(note);
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync();
+
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!await _unitOfWork._noteRepository.Exists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            try
+            {
+                await _unitOfWork._noteRepository.Delete(id);
+
+            }
+            catch (Exception)
+            {
+                return NotFound();
+            }
+
+            await _unitOfWork.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

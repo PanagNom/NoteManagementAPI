@@ -15,33 +15,24 @@ namespace NoteManagementAPI.Repositories
             _context = context;
         }
 
-        public async Task<NoteDTO> Get(int Id)
+        public async Task<Note?> Get(int Id)
         {
-            Note? note = await _context.Notes.FirstOrDefaultAsync(note => note.Id==Id);
-
-            if(note == null)
-            {
-                throw new Exception("Invalid Id");
-            }
-
-            return MapNoteToNoteDTO(note);
+            return await _context.Notes.FirstOrDefaultAsync(note => note.Id==Id);
         }
 
-        public async Task<IEnumerable<NoteDTO>?> GetAll()
+        public async Task<IEnumerable<Note>?> GetAll()
         {
-            return _context.Notes.Select(note => MapNoteToNoteDTO(note)).ToList();
+            return _context.Notes.ToList();
         }
 
         public async Task Create(Note noteToCreate)
         {
             var note = await _context.Notes.AddAsync(noteToCreate);
-            await SaveAsync();
         }
 
-        public async Task Update(NoteDTO noteToUpdate)
+        public async Task Update(Note noteToUpdate)
         {
-            _context.Notes.Update(MapNoteDTONoteTo(noteToUpdate));
-            await SaveAsync();
+            _context.Notes.Update(noteToUpdate);
         }
 
         public async Task Delete(int Id)
@@ -54,36 +45,11 @@ namespace NoteManagementAPI.Repositories
             }
 
             _context.Notes.Remove(noteToDelete);
-            await SaveAsync();
         }
 
-        public async Task SaveAsync()
+        public Task<bool> Exists(int Id)
         {
-            await _context.SaveChangesAsync();
-        }
-
-        private NoteDTO MapNoteToNoteDTO(Note note)
-        {
-            return new NoteDTO
-            {
-                Id = note.Id,
-                Title = note.Title,
-                Content = note.Content,
-                CharacterCount = note.CharacterCount,
-                Tags = note.Tags
-            };
-        }
-
-        private Note MapNoteDTONoteTo(NoteDTO noteDTO)
-        {
-            return new Note
-            {
-                Id = noteDTO.Id,
-                Title = noteDTO.Title,
-                Content = noteDTO.Content,
-                CharacterCount = noteDTO.CharacterCount,
-                Tags = noteDTO.Tags
-            };
+            return(_context.Notes.AnyAsync(note => note.Id == Id));
         }
     }
 }

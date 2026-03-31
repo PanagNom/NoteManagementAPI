@@ -5,10 +5,11 @@ namespace NoteManagementAPI.Repositories.Interfaces
 {
     public interface INoteRepository
     {
-        Task<NoteDTO> Get(int Id);
-        Task<IEnumerable<NoteDTO>?> GetAll();
+        Task<Note?> Get(int Id);
+        Task<IEnumerable<Note>?> GetAll();
+        Task<bool> Exists(int Id);
         Task Create(Note noteToCreate);
-        Task Update(NoteDTO noteToUpdate);
+        Task Update(Note noteToUpdate);
         Task Delete(int Id);
     }
 }
