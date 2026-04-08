@@ -11,5 +11,6 @@ namespace NoteManagementAPI.Infrastructure
         }
 
         public DbSet<Note> Notes { get; set; }
-    }
+        public DbSet<Tag> Tags { get; set; }
+        }
 }

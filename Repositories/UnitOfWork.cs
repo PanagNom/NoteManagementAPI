@@ -6,12 +6,14 @@ namespace NoteManagementAPI.Repositories
     public class UnitOfWork : IUnitOfWork
     {
         public INoteRepository NoteRepository { get; }
+        public ITagRepository TagRepository { get; }
         private readonly NoteDbContext _context;
 
-        public UnitOfWork(NoteDbContext context, INoteRepository noteRepository)
+        public UnitOfWork(NoteDbContext context, INoteRepository noteRepository, ITagRepository tagRepository)
         {
             _context = context;
             NoteRepository = noteRepository;
+            TagRepository = tagRepository;
         }
         public void Dispose()
         {

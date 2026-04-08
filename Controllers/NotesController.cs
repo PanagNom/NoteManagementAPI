@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
+using static Azure.Core.HttpHeader;
 
 namespace NoteManagementAPI.Controllers
 {
@@ -19,7 +21,10 @@ namespace NoteManagementAPI.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Note>?>> GetAll()
         {
-            return Ok(await _unitOfWork.NoteRepository.GetAll());
+            var notes = await _unitOfWork.NoteRepository.GetAll();
+            var noteList = MapNotesToResponse(notes);
+
+            return Ok(noteList);
         }
 
         [HttpGet("{id:int}")]
@@ -37,16 +42,17 @@ namespace NoteManagementAPI.Controllers
                 return NotFound();
             }
 
-            return retrievedNote;
+            return Ok(MapNoteToResponse(retrievedNote));
         }
 
         [HttpPost]
-        public async Task<ActionResult<Note>> Create(Note note)
+        public async Task<ActionResult<Note>> Create(NoteDTO note)
         {
-            await _unitOfWork.NoteRepository.Create(note);
+            var noteToCreate = MapNoteDTOToNoteCreate(note);
+            await _unitOfWork.NoteRepository.Create(noteToCreate);
             await _unitOfWork.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Get), new { Id = note.Id }, note);
+            return CreatedAtAction(nameof(Get), new { Id = noteToCreate.Id }, noteToCreate);
         }
 
         [HttpPut("{id:int}")]
@@ -96,5 +102,60 @@ namespace NoteManagementAPI.Controllers
 
             return NoContent();
         }
+
+        private IEnumerable<TagDTO> MapTagsToResponse(IEnumerable<Tag> tag)
+        {
+            return tag.Select(tag => new TagDTO
+            {
+                Id = tag.Id,
+                Name = tag.Name,
+                Notes = tag.Notes
+            });
+        }
+
+        private IEnumerable<Tag> MapTagsDTOsToTags(IEnumerable<TagDTO> tagDTOs)
+        {
+            return tagDTOs.Select(tagDTO => new Tag
+            {
+                Id = tagDTO.Id,
+                Name = tagDTO.Name,
+                Notes = tagDTO.Notes
+            });
+        }
+
+        private NoteDTO MapNoteToResponse(Note note)
+        {
+           return new NoteDTO
+            {
+                Id = note.Id,
+                Title = note.Title,
+                Content = note.Content,
+                Tags = MapTagsToResponse(note.Tags)
+            };
+        }
+        private IEnumerable<NoteDTO> MapNotesToResponse(IEnumerable<Note>? notes)
+        {
+            if(notes == null)
+                return Enumerable.Empty<NoteDTO>();
+
+            return notes.Select(note => new NoteDTO
+            {
+                Id = note.Id,
+                Title = note.Title,
+                Content = note.Content,
+                Tags = MapTagsToResponse(note.Tags)
+            });
+        }
+
+        private Note MapNoteDTOToNoteCreate(NoteDTO noteDTO)
+        {
+            return new Note
+            {
+                Title = noteDTO.Title,
+                Content = noteDTO.Content,
+                Tags = MapTagsDTOsToTags(noteDTO.Tags)
+            };
+        }
+        
     }
 }
