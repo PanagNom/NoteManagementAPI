@@ -12,17 +12,24 @@ namespace NoteManagementAPI.Repositories
 
         public NoteRepository(NoteDbContext context)
         {
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<Note?> Get(int Id)
+        public async Task<Note?> GetNoteAsync(int noteId, bool includeTags)
         {
-            return await _context.Notes.FirstOrDefaultAsync(note => note.Id==Id);
+            var query = _context.Notes.Where(note => note.Id == noteId);
+
+            if (includeTags)
+            {
+                query = query.Include(note => note.Tags);
+            }
+
+            return await query.FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<Note>?> GetAll()
+        public async Task<IEnumerable<Note>?> GetNotesAsync()
         {
-            return _context.Notes.ToList();
+            return await _context.Notes.OrderBy(note => note.Title).ToListAsync();
         }
 
         public async Task Create(Note noteToCreate)
@@ -30,14 +37,14 @@ namespace NoteManagementAPI.Repositories
             await _context.Notes.AddAsync(noteToCreate);
         }
 
-        public void Update(Note noteToUpdate)
+        public async Task Update(Note noteToUpdate)
         {
             _context.Notes.Update(noteToUpdate);
         }
 
-        public async Task Delete(int Id)
+        public async Task DeleteNote(int noteId)
         {
-            Note? noteToDelete = await _context.Notes.FindAsync(Id);
+            Note? noteToDelete = await _context.Notes.FindAsync(noteId);
 
             if (noteToDelete == null)
             {
@@ -47,9 +54,9 @@ namespace NoteManagementAPI.Repositories
             _context.Notes.Remove(noteToDelete);
         }
 
-        public Task<bool> Exists(int Id)
+        public async Task<bool> NoteExistsAsync(int noteId)
         {
-            return(_context.Notes.AnyAsync(note => note.Id == Id));
+            return await _context.Notes.AnyAsync(note => note.Id == noteId);
         }
     }
 }

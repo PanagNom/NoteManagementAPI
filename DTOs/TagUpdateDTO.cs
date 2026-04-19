@@ -2,7 +2,7 @@
 
 namespace NoteManagementAPI.DTOs
 {
-    public class TagDTOCreate
+    public class TagUpdateDTO
     {
         [Required(ErrorMessage = "You should provide a name value.")]
         [MaxLength(50)]

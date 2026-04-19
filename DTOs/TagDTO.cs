@@ -6,6 +6,5 @@ namespace NoteManagementAPI.DTOs
     {
         public int Id { get; set; }
         public string Name { get; set; } = default!;
-        public IEnumerable<Note> Notes { get; set; }
     }
 }

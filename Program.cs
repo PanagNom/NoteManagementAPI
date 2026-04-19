@@ -2,10 +2,20 @@ using Microsoft.EntityFrameworkCore;
 using NoteManagementAPI.Infrastructure;
 using NoteManagementAPI.Repositories;
 using NoteManagementAPI.Repositories.Interfaces;
+using Microsoft.AspNetCore.StaticFiles;
+using Serilog;
+using NoteManagementAPI.Profiles;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
+    .WriteTo.Console()
+    .WriteTo.File("logs/noteinfo.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Host.UseSerilog();
 
 builder.Services.AddControllers();
 
@@ -18,6 +28,11 @@ builder.Services.AddDbContext<NoteDbContext>(options => options.UseSqlServer(bui
 builder.Services.AddScoped<INoteRepository, NoteRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddAutoMapper(cfg => {
+    cfg.AddProfile<NoteProfile>();
+    cfg.AddProfile<TagProfile>();
+});
 
 var app = builder.Build();
 
@@ -32,6 +47,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseRouting();
 
 app.UseAuthorization();
 

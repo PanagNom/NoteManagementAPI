@@ -114,7 +114,6 @@ namespace NoteManagementAPI.Controllers
             {
                 Id = tags.Id,
                 Name = tags.Name,
-                Notes = tags.Notes
             };
         }
     }
