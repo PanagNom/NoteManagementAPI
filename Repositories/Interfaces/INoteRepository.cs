@@ -5,7 +5,7 @@ namespace NoteManagementAPI.Repositories.Interfaces
 {
     public interface INoteRepository
     {
-        Task<Note?> GetNoteAsync(int noteId, bool includeTags);
+        Task<Note?> GetNoteAsync(int noteId, bool includeTags = false);
         Task<IEnumerable<Note>?> GetNotesAsync();
         Task<bool> NoteExistsAsync(int noteId);
         Task Create(Note noteToCreate);

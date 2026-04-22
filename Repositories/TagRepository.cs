@@ -15,14 +15,38 @@ namespace NoteManagementAPI.Repositories
             _context = context;
         }
 
-        public async Task Create(Tag tagToCreate)
+        public async Task<IEnumerable<Tag>?> GetTagsAsync(bool includeNotes = false)
+        {
+            var query = _context.Tags.OrderBy(tag => tag.Name).AsQueryable();
+
+            if (includeNotes)
+            {
+                query = query.Include(t => t.Notes);
+            }
+
+            return await query.ToListAsync();
+        }
+
+        public async Task<Tag?> GetTagAsync(int tagId, bool includeNotes= false)
+        {
+            var query = _context.Tags.Where(tag => tag.Id == tagId).AsQueryable();
+
+            if (includeNotes)
+            {
+                query = query.Include(t => t.Notes);
+            }
+
+            return await query.FirstOrDefaultAsync();
+        }
+
+        public async Task CreateTagAsync(Tag tagToCreate)
         {
             await _context.Tags.AddAsync(tagToCreate);
         }
 
-        public async Task Delete(int Id)
+        public async Task DeleteTagAsync(int tagId)
         {
-            Tag? tagToDelete = await _context.Tags.FindAsync(Id);
+            Tag? tagToDelete = await _context.Tags.FindAsync(tagId);
             if (tagToDelete == null) 
             {
                 throw new Exception("Invalid Id");
@@ -30,22 +54,12 @@ namespace NoteManagementAPI.Repositories
             _context.Tags.Remove(tagToDelete);
         }
 
-        public Task<bool> Exists(int Id)
+        public async Task<bool> TagExistsAsync(int tagId)
         {
-            return (_context.Tags.AnyAsync(tag=>tag.Id ==Id));
+            return await _context.Tags.AnyAsync(tag=>tag.Id == tagId );
         }
 
-        public async Task<Tag?> Get(int Id)
-        {
-            return await _context.Tags.FirstOrDefaultAsync(tag => tag.Id == Id);
-        }
-
-        public async Task<IEnumerable<Tag>?> GetAll()
-        {
-            return _context.Tags.ToList();
-        }
-
-        public void Update(Tag tagToUpdate)
+        public void UpdateTag(Tag tagToUpdate)
         {
             _context.Tags.Update(tagToUpdate);
         }

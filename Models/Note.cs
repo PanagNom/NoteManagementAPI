@@ -8,7 +8,7 @@
         public IEnumerable<Tag>? Tags { get; set; } = default!;
         public string CreatedBy { get; set; } = default!;
         public DateTime CreatedAt { get; set; }
-        public string ModifieddBy { get; set; } = default!;
+        public string ModifiedBy { get; set; } = default!;
         public DateTime ModifiedAt { get; set; }
         public bool IsDeleted { get; set; }
     }

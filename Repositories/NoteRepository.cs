@@ -15,7 +15,7 @@ namespace NoteManagementAPI.Repositories
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<Note?> GetNoteAsync(int noteId, bool includeTags)
+        public async Task<Note?> GetNoteAsync(int noteId, bool includeTags=false)
         {
             var query = _context.Notes.Where(note => note.Id == noteId);
 

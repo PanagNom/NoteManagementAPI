@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
@@ -11,110 +12,85 @@ namespace NoteManagementAPI.Controllers
     public class TagController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
-        public TagController(IUnitOfWork unitOfWork)
+        private readonly IMapper _mapp;
+        public TagController(IUnitOfWork unitOfWork, IMapper map)
         {
             _unitOfWork = unitOfWork;
+            _mapp = map;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Tag>?>> GetAll()
         {
-            var tags = await _unitOfWork.TagRepository.GetAll();
-
-            return Ok(MapTagstoTagsDTO(tags));
+            var tags = await _unitOfWork.TagRepository.GetTagsAsync();
+            return Ok(_mapp.Map<IEnumerable<TagDTO>>(tags));
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<Tag?>> Get(int id)
         {
-            var tag = await _unitOfWork.TagRepository.Get(id);
+            var tag = await _unitOfWork.TagRepository.GetTagAsync(id);
 
             if (tag == null)
             {
                 return NotFound();
             }
 
-            return Ok(MapTagtoTagDTO(tag));
+            return Ok(_mapp.Map<TagDTO>(tag));
         }
 
         [HttpPost]
         public async Task<ActionResult<Tag>> Create(TagDTOCreate tag)
         {
-            var tagToCreate = MapTagDTOToTagCreate(tag);
-            await _unitOfWork.TagRepository.Create(tagToCreate);
+            var tagToCreate = _mapp.Map<Tag>(tag);
+            baseAttributesFill(tagToCreate);
+
+            await _unitOfWork.TagRepository.CreateTagAsync(tagToCreate);
             await _unitOfWork.SaveChangesAsync();
             return CreatedAtAction(nameof(Get), new { Id = tagToCreate.Id }, tagToCreate);
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, TagDTO tag)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Put(int id, TagUpdateDTO tag)
         {
-            if (id < 1)
-            {
-                return BadRequest("Id must be greater than 0");
-            }
-            var tagToUpdate = await _unitOfWork.TagRepository.Get(id);
+            var tagToUpdate = await _unitOfWork.TagRepository.GetTagAsync(id);
+
             if (tagToUpdate == null)
             {
                 return NotFound();
             }
-            tagToUpdate.Name = tag.Name;
-            _unitOfWork.TagRepository.Update(tagToUpdate);
+
+            _mapp.Map(tag, tagToUpdate); 
+
+            _unitOfWork.TagRepository.UpdateTag(tagToUpdate);
             await _unitOfWork.SaveChangesAsync();
+
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
             if (id < 1)
             {
                 return BadRequest("Id must be greater than 0");
             }
-            var tagToDelete = await _unitOfWork.TagRepository.Get(id);
+            var tagToDelete = await _unitOfWork.TagRepository.GetTagAsync(id);
             if (tagToDelete == null)
             {
                 return NotFound();
             }
-            await _unitOfWork.TagRepository.Delete(id);
+            await _unitOfWork.TagRepository.DeleteTagAsync(id);
             await _unitOfWork.SaveChangesAsync();
             return NoContent();
         }
 
-        private Tag MapTagDTOToTagCreate(TagDTOCreate tag)
+        private void baseAttributesFill(Tag tag)
         {
-            return new Tag
-            {
-                Name = tag.Name,
-                CreatedBy = User?.Identity?.Name?? "Tester",
-                CreatedDate = DateTime.UtcNow,
-                ModifiedBy = User?.Identity?.Name ?? "Tester",
-                ModifiedDate = DateTime.UtcNow,
-            };
-        }
-
-        private IEnumerable<TagDTO> MapTagstoTagsDTO(IEnumerable<Tag>? tags)
-        {
-            if(tags == null)
-            {
-                return Enumerable.Empty<TagDTO>();
-            }
-
-            return tags.Select(t => new TagDTO
-            {
-                Id = t.Id,
-                Name = t.Name
-
-            });
-        }
-
-        private TagDTO MapTagtoTagDTO(Tag tags)
-        {
-            return new TagDTO
-            {
-                Id = tags.Id,
-                Name = tags.Name,
-            };
+            tag.CreatedDate = DateTime.UtcNow;
+            tag.ModifiedDate = DateTime.UtcNow;
+            tag.CreatedBy = User.Identity?.Name ?? "CreateTest";
+            tag.ModifiedBy = User.Identity?.Name ?? "CreateTest";
         }
     }
 }

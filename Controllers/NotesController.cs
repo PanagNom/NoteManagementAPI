@@ -50,6 +50,8 @@ namespace NoteManagementAPI.Controllers
         public async Task<ActionResult<Note>> Create(NoteCreationDTO note)
         {
             var noteToCreate = _mapper.Map<Note>(note);
+            baseAttributesFill(noteToCreate);
+
             await _unitOfWork.NoteRepository.Create(noteToCreate);
             await _unitOfWork.SaveChangesAsync();
 
@@ -57,31 +59,19 @@ namespace NoteManagementAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Put(int id, Note note)
+        public async Task<IActionResult> Put(int id, NoteUpdateDTO note)
         {
-            if (id != note.Id)
+            var noteRetrieved = await _unitOfWork.NoteRepository.GetNoteAsync(id);
+
+            if (noteRetrieved == null)
             {
-                return BadRequest("Id in the URL must match Id in the body");
+                return NotFound();
             }
 
-            await _unitOfWork.NoteRepository.Update(note);
+            _mapper.Map(note, noteRetrieved);
 
-            try
-            {
-                await _unitOfWork.SaveChangesAsync();
-
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await _unitOfWork.NoteRepository.NoteExistsAsync(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _unitOfWork.NoteRepository.Update(noteRetrieved);
+            await _unitOfWork.SaveChangesAsync();
 
             return NoContent();
         }
@@ -102,6 +92,14 @@ namespace NoteManagementAPI.Controllers
             await _unitOfWork.SaveChangesAsync();
 
             return NoContent();
+        }
+    
+        private void baseAttributesFill(Note note)
+        {
+            note.CreatedAt = DateTime.UtcNow;
+            note.ModifiedAt = DateTime.UtcNow;
+            note.CreatedBy = User.Identity?.Name ?? "CreateTest";
+            note.ModifiedBy = User.Identity?.Name ?? "CreateTest";
         }
     }
 }

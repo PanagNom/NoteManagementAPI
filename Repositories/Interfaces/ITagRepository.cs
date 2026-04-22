@@ -4,11 +4,11 @@ namespace NoteManagementAPI.Repositories.Interfaces
 {
     public interface ITagRepository
     {
-        Task<Tag?> Get(int Id);
-        Task<IEnumerable<Tag>?> GetAll();
-        Task<bool> Exists(int Id);
-        Task Create(Tag tagToCreate);
-        void Update(Tag tagToUpdate);
-        Task Delete(int Id);
+        Task<Tag?> GetTagAsync(int Id, bool includeNotes = false);
+        Task<IEnumerable<Tag>?> GetTagsAsync(bool includeNotes = false);
+        Task<bool> TagExistsAsync(int Id);
+        Task CreateTagAsync(Tag tagToCreate);
+        void UpdateTag(Tag tagToUpdate);
+        Task DeleteTagAsync(int Id);
     }
 }
