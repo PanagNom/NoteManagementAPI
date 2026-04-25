@@ -32,6 +32,19 @@ namespace NoteManagementAPI.Repositories
             return await _context.Notes.OrderBy(note => note.Title).ToListAsync();
         }
 
+        public async Task<IEnumerable<Note>?> GetNotesAsync(string? title)
+        {
+            if (string.IsNullOrEmpty(title))
+            {
+                return await GetNotesAsync();
+            }
+            title = title.Trim();
+            return await _context.Notes
+                .Where(n => n.Title == title)
+                .OrderBy(n => n.Title)
+                .ToListAsync();
+        }
+
         public async Task Create(Note noteToCreate)
         {
             await _context.Notes.AddAsync(noteToCreate);
