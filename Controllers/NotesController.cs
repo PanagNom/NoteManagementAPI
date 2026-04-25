@@ -51,11 +51,25 @@ namespace NoteManagementAPI.Controllers
         {
             var noteToCreate = _mapper.Map<Note>(note);
             baseAttributesFill(noteToCreate);
-
+            
+            if(note.Tags != null && note.Tags.Any())
+            {
+                var tagList = note.Tags.ToList();
+                List<Tag> noteTags = new List<Tag>();
+                foreach (var tag in tagList)
+                {
+                    var tagToAdd = await _unitOfWork.TagRepository.GetTagAsync(tag.Id);
+                    if (tagToAdd != null) 
+                    {
+                        noteTags.Add(tagToAdd);
+                    }
+                }
+                noteToCreate.Tags = noteTags;
+            }
             await _unitOfWork.NoteRepository.Create(noteToCreate);
             await _unitOfWork.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Get), new { Id = noteToCreate.Id }, noteToCreate);
+            return CreatedAtAction(nameof(Get), new { Id = noteToCreate.Id }, _mapper.Map<NoteDTO>(noteToCreate));
         }
 
         [HttpPut("{id:int}")]
@@ -70,6 +84,24 @@ namespace NoteManagementAPI.Controllers
 
             _mapper.Map(note, noteRetrieved);
 
+            if (note.Tags != null && note.Tags.Any())
+            {
+                var tagList = note.Tags.ToList();
+                List<Tag> noteTags = new List<Tag>();
+                foreach (var tag in tagList)
+                {
+                    var tagToAdd = await _unitOfWork.TagRepository.GetTagAsync(tag.Id);
+                    if (tagToAdd != null)
+                    {
+                        noteTags.Add(tagToAdd);
+                    }
+                }
+                noteRetrieved.Tags = noteTags;
+            }
+            else
+            {
+                noteRetrieved.Tags = null;
+            }
             await _unitOfWork.NoteRepository.Update(noteRetrieved);
             await _unitOfWork.SaveChangesAsync();
 

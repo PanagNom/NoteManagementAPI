@@ -9,6 +9,7 @@ namespace NoteManagementAPI.Profiles
             CreateMap<Models.Tag, DTOs.TagDTO>().ReverseMap();
             CreateMap<Models.Tag, DTOs.TagDTOCreate>().ReverseMap();
             CreateMap<Models.Tag, DTOs.TagUpdateDTO>().ReverseMap();
+            CreateMap<Models.Tag, DTOs.TagInNoteDTO>().ReverseMap();
         }
     }
 }
