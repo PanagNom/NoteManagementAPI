@@ -21,9 +21,9 @@ namespace NoteManagementAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Note>?>> GetAll()
+        public async Task<ActionResult<IEnumerable<Note>?>> GetAll(string? name)
         {
-            var notes = await _unitOfWork.NoteRepository.GetNotesAsync();
+            var notes = await _unitOfWork.NoteRepository.GetNotesAsync(name);
 
             return Ok(_mapper.Map<IEnumerable<NoteDTO>>(notes));
         }

@@ -4,6 +4,6 @@
     {
         public string Title { get; set; } = default!;
         public string Content { get; set; } = default!;
-        public IEnumerable<TagDTO>? Tags { get; set; }
+        public IEnumerable<TagInNoteDTO>? Tags { get; set; }
     }
 }
