@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NoteManagementAPI.DTOs;
@@ -10,6 +11,7 @@ using static Azure.Core.HttpHeader;
 namespace NoteManagementAPI.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
     public class NotesController : ControllerBase
     {

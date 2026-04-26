@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using NoteManagementAPI.DTOs;
@@ -8,6 +9,7 @@ using NoteManagementAPI.Repositories.Interfaces;
 namespace NoteManagementAPI.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
     public class TagController : ControllerBase
     {
