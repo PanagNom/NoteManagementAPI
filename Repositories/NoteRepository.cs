@@ -3,6 +3,7 @@ using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Infrastructure;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
+using NoteManagementAPI.Services;
 
 namespace NoteManagementAPI.Repositories
 {
@@ -32,17 +33,31 @@ namespace NoteManagementAPI.Repositories
             return await _context.Notes.OrderBy(note => note.Title).ToListAsync();
         }
 
-        public async Task<IEnumerable<Note>?> GetNotesAsync(string? title)
+        public async Task<(IEnumerable<Note>?, PaginationMetadata)> GetNotesAsync(string? title, string? searchQuery, int pageNumber, int pageSize)
         {
-            if (string.IsNullOrEmpty(title))
+            IQueryable<Note> notes = _context.Notes;
+
+            if (!string.IsNullOrEmpty(title))
             {
-                return await GetNotesAsync();
+                title = title.Trim();
+                notes = notes.Where(n => n.Title == title);
             }
-            title = title.Trim();
-            return await _context.Notes
-                .Where(n => n.Title == title)
-                .OrderBy(n => n.Title)
+
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                searchQuery = searchQuery.Trim();
+                notes = notes.Where(n => n.Content.Contains(searchQuery) || n.Title.Contains(searchQuery));
+            }
+
+            var totalItemCount = await notes.CountAsync();
+            var paginationMetadata = new PaginationMetadata(totalItemCount, pageSize, pageNumber);
+
+            var collectionToReturn = await notes.OrderBy(n => n.Title)
+                .Skip(pageSize * (pageNumber - 1))
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (collectionToReturn, paginationMetadata);
         }
 
         public async Task Create(Note noteToCreate)

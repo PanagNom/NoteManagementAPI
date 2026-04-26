@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
+using System.Text.Json;
 using static Azure.Core.HttpHeader;
 
 namespace NoteManagementAPI.Controllers
@@ -21,9 +22,16 @@ namespace NoteManagementAPI.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Note>?>> GetAll(string? name)
+        public async Task<ActionResult<IEnumerable<Note>?>> GetAll(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
         {
-            var notes = await _unitOfWork.NoteRepository.GetNotesAsync(name);
+            if (pageSize > 20) 
+            {
+                pageSize = 20;
+            }
+
+            var (notes, paginationMetadata) = await _unitOfWork.NoteRepository.GetNotesAsync(name, searchQuery, pageNumber, pageSize);
+
+            Response.Headers.Append("X-Pagination", JsonSerializer.Serialize(paginationMetadata));
 
             return Ok(_mapper.Map<IEnumerable<NoteDTO>>(notes));
         }
