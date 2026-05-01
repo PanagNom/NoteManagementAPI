@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -8,9 +9,10 @@ using NoteManagementAPI.Repositories.Interfaces;
 
 namespace NoteManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     [Authorize]
     [ApiController]
+    [ApiVersion("1.0")]
     public class TagController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;

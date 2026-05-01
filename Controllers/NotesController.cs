@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using Asp.Versioning;
+using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,9 +11,10 @@ using static Azure.Core.HttpHeader;
 
 namespace NoteManagementAPI.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     [Authorize]
     [ApiController]
+    [ApiVersion("1.0")]
     public class NotesController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -22,8 +24,17 @@ namespace NoteManagementAPI.Controllers
             _unitOfWork = unitOfWork;
             _mapper = mapper;
         }
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="searchQuery"></param>
+        /// <param name="pageNumber"></param>
+        /// <param name="pageSize"></param>
+        /// <returns>All notes created.</returns>
+        /// <response code="200">Returns all notes created.</response>
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<Note>?>> GetAll(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
         {
             if (pageSize > 20) 
@@ -38,6 +49,8 @@ namespace NoteManagementAPI.Controllers
             return Ok(_mapper.Map<IEnumerable<NoteDTO>>(notes));
         }
 
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpGet("{id:int}")]
         public async Task<ActionResult<Note>> Get(int id, bool includeTags = false)
         {
@@ -83,6 +96,7 @@ namespace NoteManagementAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> Put(int id, NoteUpdateDTO note)
         {
             var noteRetrieved = await _unitOfWork.NoteRepository.GetNoteAsync(id);
@@ -119,6 +133,8 @@ namespace NoteManagementAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
             try
