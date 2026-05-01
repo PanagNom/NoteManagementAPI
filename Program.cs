@@ -3,7 +3,6 @@ using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models;
 using NoteManagementAPI.Infrastructure;
 using NoteManagementAPI.Profiles;
 using NoteManagementAPI.Repositories;
@@ -88,17 +87,10 @@ builder.Services.AddSwaggerGen(setupAction =>
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
     });
 
-    setupAction.AddSecurityRequirement(new OpenApiSecurityRequirement 
+    setupAction.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "NoteManagementBearerAuth"
-                }
-            },
+            new OpenApiSecuritySchemeReference("NoteManagementBearerAuth", document, null),
             new List<string>()
         }
     });
@@ -109,7 +101,11 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger(options =>
+    {
+        options.RouteTemplate = "openapi/{documentName}.json";
+    });
+
     app.UseSwaggerUI(options =>
     {
         var descriptions = app.DescribeApiVersions();

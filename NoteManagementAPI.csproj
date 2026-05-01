@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>77321a51-fd81-45cb-b268-db72f6977d8a</UserSecretsId>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <DocumentationFile>NoteManagmentAPI.xml</DocumentationFile>
+    <DocumentationFile>NoteManagementAPI.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
