@@ -24,10 +24,7 @@ namespace NoteManagementAPI.Controllers
         /// <summary>
         /// Initializes a new instance of the <see cref="Authentication"/> controller.
         /// </summary>
-        public Authentication(
-            UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager,
-            IAuthenticationTokenService tokenService)
+        public Authentication(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IAuthenticationTokenService tokenService)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _signInManager = signInManager ?? throw new ArgumentNullException(nameof(signInManager));
@@ -94,9 +91,7 @@ namespace NoteManagementAPI.Controllers
                 return Unauthorized("Invalid username or password.");
             }
 
-            var tokenResponse = await _tokenService.IssueTokenPairAsync(
-                user,
-                HttpContext.RequestAborted);
+            var tokenResponse = await _tokenService.IssueTokenPairAsync(user, HttpContext.RequestAborted);
             return Ok(tokenResponse);
         }
 
@@ -112,9 +107,7 @@ namespace NoteManagementAPI.Controllers
         public async Task<ActionResult<TokenResponseDTO>> Refresh(
             [FromBody] RefreshTokenRequestDTO request)
         {
-            var tokenResponse = await _tokenService.RotateRefreshTokenAsync(
-                request.RefreshToken,
-                HttpContext.RequestAborted);
+            var tokenResponse = await _tokenService.RotateRefreshTokenAsync(request.RefreshToken, HttpContext.RequestAborted);
 
             if (tokenResponse == null)
             {
@@ -132,18 +125,14 @@ namespace NoteManagementAPI.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> Revoke([FromBody] RefreshTokenRequestDTO request)
         {
-            await _tokenService.RevokeRefreshTokenFamilyAsync(
-                request.RefreshToken,
-                GetCurrentUserId(),
-                HttpContext.RequestAborted);
+            await _tokenService.RevokeRefreshTokenFamilyAsync(request.RefreshToken, GetCurrentUserId(), HttpContext.RequestAborted);
 
             return NoContent();
         }
 
         private string GetCurrentUserId()
         {
-            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? throw new InvalidOperationException("The authenticated user id claim is missing.");
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new InvalidOperationException("The authenticated user id claim is missing.");
         }
     }
 }

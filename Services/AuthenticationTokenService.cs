@@ -21,29 +21,18 @@ namespace NoteManagementAPI.Services
         private readonly JwtAuthenticationSettings _settings;
         private readonly SigningCredentials _signingCredentials;
 
-        public AuthenticationTokenService(
-            NoteDbContext context,
-            UserManager<ApplicationUser> userManager,
-            JwtAuthenticationSettings settings)
+        public AuthenticationTokenService(NoteDbContext context, UserManager<ApplicationUser> userManager, JwtAuthenticationSettings settings)
         {
             _context = context;
             _userManager = userManager;
             _settings = settings;
-            _signingCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(settings.GetSigningKeyBytes()),
-                SecurityAlgorithms.HmacSha256);
+            _signingCredentials = new SigningCredentials(new SymmetricSecurityKey(settings.GetSigningKeyBytes()), SecurityAlgorithms.HmacSha256);
         }
 
-        public async Task<TokenResponseDTO> IssueTokenPairAsync(
-            ApplicationUser user,
-            CancellationToken cancellationToken)
+        public async Task<TokenResponseDTO> IssueTokenPairAsync(ApplicationUser user, CancellationToken cancellationToken)
         {
             var now = DateTimeOffset.UtcNow;
-            var refreshToken = CreateRefreshToken(
-                user.Id,
-                Guid.NewGuid(),
-                now,
-                now.AddDays(_settings.RefreshTokenLifetimeDays));
+            var refreshToken = CreateRefreshToken(user.Id, Guid.NewGuid(), now, now.AddDays(_settings.RefreshTokenLifetimeDays));
 
             var response = await CreateResponseAsync(user, refreshToken, now);
             _context.RefreshTokens.Add(refreshToken.Entity);
@@ -52,9 +41,7 @@ namespace NoteManagementAPI.Services
             return response;
         }
 
-        public async Task<TokenResponseDTO?> RotateRefreshTokenAsync(
-            string refreshToken,
-            CancellationToken cancellationToken)
+        public async Task<TokenResponseDTO?> RotateRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
         {
             var tokenHash = HashRefreshToken(refreshToken);
             var currentToken = await _context.RefreshTokens
@@ -69,11 +56,7 @@ namespace NoteManagementAPI.Services
             var now = DateTimeOffset.UtcNow;
             if (currentToken.RevokedAtUtc != null)
             {
-                await RevokeActiveFamilyAsync(
-                    currentToken.UserId,
-                    currentToken.FamilyId,
-                    now,
-                    cancellationToken);
+                await RevokeActiveFamilyAsync(currentToken.UserId, currentToken.FamilyId, now, cancellationToken);
                 return null;
             }
 
@@ -82,11 +65,7 @@ namespace NoteManagementAPI.Services
                 return null;
             }
 
-            var replacementToken = CreateRefreshToken(
-                currentToken.UserId,
-                currentToken.FamilyId,
-                now,
-                currentToken.ExpiresAtUtc);
+            var replacementToken = CreateRefreshToken(currentToken.UserId, currentToken.FamilyId, now, currentToken.ExpiresAtUtc);
 
             currentToken.Revoke(now, replacementToken.Entity.TokenHash);
             _context.RefreshTokens.Add(replacementToken.Entity);
@@ -100,21 +79,14 @@ namespace NoteManagementAPI.Services
             catch (DbUpdateConcurrencyException)
             {
                 _context.ChangeTracker.Clear();
-                await RevokeActiveFamilyAsync(
-                    currentToken.UserId,
-                    currentToken.FamilyId,
-                    now,
-                    cancellationToken);
+                await RevokeActiveFamilyAsync(currentToken.UserId, currentToken.FamilyId, now, cancellationToken);
                 return null;
             }
 
             return response;
         }
 
-        public async Task RevokeRefreshTokenFamilyAsync(
-            string refreshToken,
-            string userId,
-            CancellationToken cancellationToken)
+        public async Task RevokeRefreshTokenFamilyAsync(string refreshToken, string userId, CancellationToken cancellationToken)
         {
             var tokenHash = HashRefreshToken(refreshToken);
             var familyId = await _context.RefreshTokens
@@ -127,17 +99,10 @@ namespace NoteManagementAPI.Services
                 return;
             }
 
-            await RevokeActiveFamilyAsync(
-                userId,
-                familyId.Value,
-                DateTimeOffset.UtcNow,
-                cancellationToken);
+            await RevokeActiveFamilyAsync(userId, familyId.Value, DateTimeOffset.UtcNow, cancellationToken);
         }
 
-        private async Task<TokenResponseDTO> CreateResponseAsync(
-            ApplicationUser user,
-            RefreshTokenIssue refreshToken,
-            DateTimeOffset now)
+        private async Task<TokenResponseDTO> CreateResponseAsync(ApplicationUser user, RefreshTokenIssue refreshToken, DateTimeOffset now)
         {
             var roles = await _userManager.GetRolesAsync(user);
             var accessTokenExpiresAtUtc = now.AddMinutes(_settings.AccessTokenLifetimeMinutes);
@@ -171,20 +136,11 @@ namespace NoteManagementAPI.Services
             };
         }
 
-        private static RefreshTokenIssue CreateRefreshToken(
-            string userId,
-            Guid familyId,
-            DateTimeOffset createdAtUtc,
-            DateTimeOffset expiresAtUtc)
+        private static RefreshTokenIssue CreateRefreshToken(string userId, Guid familyId, DateTimeOffset createdAtUtc, DateTimeOffset expiresAtUtc)
         {
             var rawToken = Base64UrlEncoder.Encode(
                 RandomNumberGenerator.GetBytes(RefreshTokenByteLength));
-            var entity = new RefreshToken(
-                HashRefreshToken(rawToken),
-                userId,
-                familyId,
-                createdAtUtc,
-                expiresAtUtc);
+            var entity = new RefreshToken(HashRefreshToken(rawToken), userId, familyId, createdAtUtc, expiresAtUtc);
 
             return new RefreshTokenIssue(rawToken, entity);
         }
@@ -194,11 +150,7 @@ namespace NoteManagementAPI.Services
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken)));
         }
 
-        private Task<int> RevokeActiveFamilyAsync(
-            string userId,
-            Guid familyId,
-            DateTimeOffset revokedAtUtc,
-            CancellationToken cancellationToken)
+        private Task<int> RevokeActiveFamilyAsync(string userId, Guid familyId, DateTimeOffset revokedAtUtc, CancellationToken cancellationToken)
         {
             return _context.RefreshTokens
                 .Where(token =>
