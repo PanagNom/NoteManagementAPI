@@ -221,6 +221,7 @@ namespace NoteManagementAPI.Controllers
         {
             var tags = new List<Tag>();
             var missingTagIds = new List<int>();
+            var ownerUserId = GetCurrentUserId();
 
             if (tagReferences == null)
             {
@@ -229,7 +230,7 @@ namespace NoteManagementAPI.Controllers
 
             foreach (var tagId in tagReferences.Select(tag => tag.Id).Distinct())
             {
-                var tagToAdd = await _unitOfWork.TagRepository.GetTagAsync(tagId);
+                var tagToAdd = await _unitOfWork.TagRepository.GetTagAsync(tagId, ownerUserId);
                 if (tagToAdd == null)
                 {
                     missingTagIds.Add(tagId);

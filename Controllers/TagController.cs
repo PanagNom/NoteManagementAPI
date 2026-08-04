@@ -1,10 +1,12 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NoteManagementAPI.Authorization;
 using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
+using System.Security.Claims;
 
 namespace NoteManagementAPI.Controllers
 {
@@ -16,17 +18,22 @@ namespace NoteManagementAPI.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IAuthorizationService _authorizationService;
 
-        public TagController(IUnitOfWork unitOfWork, IMapper map)
+        public TagController(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IAuthorizationService authorizationService)
         {
             _unitOfWork = unitOfWork;
-            _mapper = map;
+            _mapper = mapper;
+            _authorizationService = authorizationService;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TagDTO>>> GetAll()
         {
-            var tags = await _unitOfWork.TagRepository.GetTagsAsync();
+            var tags = await _unitOfWork.TagRepository.GetTagsAsync(GetCurrentUserId());
             return Ok(_mapper.Map<IEnumerable<TagDTO>>(tags));
         }
 
@@ -38,11 +45,19 @@ namespace NoteManagementAPI.Controllers
                 return BadRequest("Id must be greater than 0.");
             }
 
-            var tag = await _unitOfWork.TagRepository.GetTagAsync(id);
-
+            var tag = await _unitOfWork.TagRepository.GetTagAsync(id, GetCurrentUserId());
             if (tag == null)
             {
                 return NotFound();
+            }
+
+            var authorizationResult = await _authorizationService.AuthorizeAsync(
+                User,
+                tag,
+                TagOperations.Read);
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
             }
 
             return Ok(_mapper.Map<TagDTO>(tag));
@@ -51,7 +66,21 @@ namespace NoteManagementAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<TagDTO>> Create(TagDTOCreate tag)
         {
+            var ownerUserId = GetCurrentUserId();
+            var normalizedName = tag.Name.Trim();
+            if (normalizedName.Length == 0)
+            {
+                return BadRequest("Tag name cannot be empty.");
+            }
+
+            if (await _unitOfWork.TagRepository.TagNameExistsAsync(ownerUserId, normalizedName))
+            {
+                return Conflict("A tag with this name already exists.");
+            }
+
+            tag.Name = normalizedName;
             var tagToCreate = _mapper.Map<Tag>(tag);
+            tagToCreate.AssignOwner(ownerUserId);
             SetCreationAuditFields(tagToCreate);
 
             await _unitOfWork.TagRepository.CreateTagAsync(tagToCreate);
@@ -71,13 +100,34 @@ namespace NoteManagementAPI.Controllers
                 return BadRequest("Id must be greater than 0.");
             }
 
-            var tagToUpdate = await _unitOfWork.TagRepository.GetTagAsync(id);
-
+            var ownerUserId = GetCurrentUserId();
+            var tagToUpdate = await _unitOfWork.TagRepository.GetTagAsync(id, ownerUserId);
             if (tagToUpdate == null)
             {
                 return NotFound();
             }
 
+            var authorizationResult = await _authorizationService.AuthorizeAsync(
+                User,
+                tagToUpdate,
+                TagOperations.Update);
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
+
+            var normalizedName = tag.Name.Trim();
+            if (normalizedName.Length == 0)
+            {
+                return BadRequest("Tag name cannot be empty.");
+            }
+
+            if (await _unitOfWork.TagRepository.TagNameExistsAsync(ownerUserId, normalizedName, id))
+            {
+                return Conflict("A tag with this name already exists.");
+            }
+
+            tag.Name = normalizedName;
             _mapper.Map(tag, tagToUpdate);
             SetModificationAuditFields(tagToUpdate);
 
@@ -92,15 +142,27 @@ namespace NoteManagementAPI.Controllers
         {
             if (id < 1)
             {
-                return BadRequest("Id must be greater than 0");
+                return BadRequest("Id must be greater than 0.");
             }
-            var tagToDelete = await _unitOfWork.TagRepository.GetTagAsync(id);
+
+            var tagToDelete = await _unitOfWork.TagRepository.GetTagAsync(id, GetCurrentUserId());
             if (tagToDelete == null)
             {
                 return NotFound();
             }
-            await _unitOfWork.TagRepository.DeleteTagAsync(id);
+
+            var authorizationResult = await _authorizationService.AuthorizeAsync(
+                User,
+                tagToDelete,
+                TagOperations.Delete);
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
+
+            _unitOfWork.TagRepository.DeleteTag(tagToDelete);
             await _unitOfWork.SaveChangesAsync();
+
             return NoContent();
         }
 
@@ -124,6 +186,12 @@ namespace NoteManagementAPI.Controllers
         private string GetCurrentUserName()
         {
             return User.Identity?.Name ?? "unknown";
+        }
+
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? throw new InvalidOperationException("The authenticated user id claim is missing.");
         }
 
         private string GetRequestedApiVersionValue()

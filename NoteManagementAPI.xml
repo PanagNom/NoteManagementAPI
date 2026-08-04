@@ -119,6 +119,18 @@
         <member name="M:NoteManagementAPI.Migrations.AddNoteOwnership.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:NoteManagementAPI.Migrations.AddTagOwnership">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddTagOwnership.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddTagOwnership.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddTagOwnership.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.

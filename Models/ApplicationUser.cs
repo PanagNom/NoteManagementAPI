@@ -12,5 +12,6 @@ namespace NoteManagementAPI.Models
         public string LastName { get; set; } = string.Empty;
 
         public ICollection<Note> Notes { get; set; } = new List<Note>();
+        public ICollection<Tag> Tags { get; set; } = new List<Tag>();
     }
 }

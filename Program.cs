@@ -51,6 +51,7 @@ builder.Services.AddScoped<INoteRepository, NoteRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<IAuthorizationHandler, NoteAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationHandler, TagAuthorizationHandler>();
 
 builder.Services.AddAutoMapper(cfg => {
     cfg.AddProfile<NoteProfile>();

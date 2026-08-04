@@ -22,6 +22,16 @@ namespace NoteManagementAPI.Infrastructure
                 .WithMany(user => user.Notes)
                 .HasForeignKey(note => note.OwnerUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Tag>()
+                .HasOne(tag => tag.Owner)
+                .WithMany(user => user.Tags)
+                .HasForeignKey(tag => tag.OwnerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Tag>()
+                .HasIndex(tag => new { tag.OwnerUserId, tag.Name })
+                .IsUnique();
         }
     }
 }
