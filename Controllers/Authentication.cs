@@ -1,122 +1,121 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using NoteManagementAPI.DTOs;
+using NoteManagementAPI.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace NoteManagementAPI.Controllers
 {
     /// <summary>
-    /// Manages user authentication, including login and token generation.
+    /// Manages user registration, authentication, and token generation.
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
     public class Authentication : ControllerBase
     {
-        /// <summary>
-        /// Represents a request to the login action, containing username and password.
-        /// </summary>
-        public class LoginRequest
-        {
-            public string? Username { get; set; }
-            public string? Password { get; set; }
-        }
-
-        /// <summary>
-        /// Represents a user in the NotePad system.
-        /// </summary>
-        private class NotePadUser
-        {
-            public int UserId { get; set; }
-            public string Username { get; set; }
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
-
-            public NotePadUser(int userId, string username, string firstName, string lastName)
-            {
-                UserId = userId;
-                Username = username;
-                FirstName = firstName;
-                LastName = lastName;
-            }
-        }
-
         private readonly IConfiguration _configuration;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Authentication"/> controller.
         /// </summary>
-        /// <param name="configuration">Application configuration used for authentication settings.</param>
-        public Authentication(IConfiguration configuration)
+        public Authentication(
+            IConfiguration configuration,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
+            _signInManager = signInManager ?? throw new ArgumentNullException(nameof(signInManager));
         }
 
         /// <summary>
-        /// Authenticates the user by validating credentials and generating a JWT token.
+        /// Creates a new local user account.
         /// </summary>
-        /// <param name="request">The login request containing username and password.</param>
-        /// <returns>A JWT token as a string if authentication is successful; otherwise, an Unauthorized result.</returns>
-        [HttpPost("authenticate")]
-        public ActionResult<string> Authenticate([FromBody] LoginRequest? request)
+        [AllowAnonymous]
+        [HttpPost("register")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Register([FromBody] RegisterRequestDTO request)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+            var user = new ApplicationUser
             {
-                return BadRequest("Username and password are required.");
+                UserName = request.Username.Trim(),
+                Email = request.Email.Trim(),
+                FirstName = request.FirstName.Trim(),
+                LastName = request.LastName.Trim()
+            };
+
+            var result = await _userManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError(error.Code, error.Description);
+                }
+
+                return ValidationProblem(ModelState);
             }
 
-            var user = ValidateCredentials(request.Username, request.Password);
+            return StatusCode(StatusCodes.Status201Created);
+        }
 
+        /// <summary>
+        /// Validates local user credentials and returns a JWT access token.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("authenticate")]
+        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<string>> Authenticate([FromBody] LoginRequestDTO request)
+        {
+            var user = await _userManager.FindByNameAsync(request.Username.Trim());
             if (user == null)
             {
                 return Unauthorized("Invalid username or password.");
             }
 
-            var securityKey = new SymmetricSecurityKey(Convert.FromBase64String(GetRequiredConfigurationValue("Authentication:SecretForKey")));
+            var signInResult = await _signInManager.CheckPasswordSignInAsync(
+                user,
+                request.Password,
+                lockoutOnFailure: true);
+
+            if (!signInResult.Succeeded)
+            {
+                return Unauthorized("Invalid username or password.");
+            }
+
+            var securityKey = new SymmetricSecurityKey(
+                Convert.FromBase64String(GetRequiredConfigurationValue("Authentication:SecretForKey")));
             var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+            var roles = await _userManager.GetRolesAsync(user);
 
             var claimsForToken = new List<Claim>
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
-                new Claim(ClaimTypes.Name, user.Username),
-                new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName),
-                new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName)
+                new(JwtRegisteredClaimNames.Sub, user.Id),
+                new(ClaimTypes.NameIdentifier, user.Id),
+                new(ClaimTypes.Name, user.UserName!),
+                new(JwtRegisteredClaimNames.GivenName, user.FirstName),
+                new(JwtRegisteredClaimNames.FamilyName, user.LastName),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
+            claimsForToken.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+            var now = DateTime.UtcNow;
             var jwtSecurityToken = new JwtSecurityToken(
                 GetRequiredConfigurationValue("Authentication:Issuer"),
                 GetRequiredConfigurationValue("Authentication:Audience"),
                 claimsForToken,
-                DateTime.UtcNow,
-                DateTime.UtcNow.AddHours(1),
+                now,
+                now.AddHours(1),
                 signingCredentials);
 
-            var tokenToReturn = new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken);
-
-            return Ok(tokenToReturn);
-        }
-
-        private NotePadUser? ValidateCredentials(string username, string password)
-        {
-            var configuredUsername = _configuration["Authentication:Username"];
-            var configuredPassword = _configuration["Authentication:Password"];
-
-            if (string.IsNullOrWhiteSpace(configuredUsername) || string.IsNullOrEmpty(configuredPassword))
-            {
-                return null;
-            }
-
-            if (!string.Equals(username, configuredUsername, StringComparison.Ordinal) ||
-                !string.Equals(password, configuredPassword, StringComparison.Ordinal))
-            {
-                return null;
-            }
-
-            return new NotePadUser(
-                1,
-                configuredUsername,
-                _configuration["Authentication:FirstName"] ?? configuredUsername,
-                _configuration["Authentication:LastName"] ?? string.Empty);
+            return Ok(new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken));
         }
 
         private string GetRequiredConfigurationValue(string key)

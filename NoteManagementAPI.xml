@@ -6,31 +6,23 @@
     <members>
         <member name="T:NoteManagementAPI.Controllers.Authentication">
             <summary>
-            Manages user authentication, including login and token generation.
+            Manages user registration, authentication, and token generation.
             </summary>
         </member>
-        <member name="T:NoteManagementAPI.Controllers.Authentication.LoginRequest">
-            <summary>
-            Represents a request to the login action, containing username and password.
-            </summary>
-        </member>
-        <member name="T:NoteManagementAPI.Controllers.Authentication.NotePadUser">
-            <summary>
-            Represents a user in the NotePad system.
-            </summary>
-        </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.#ctor(Microsoft.Extensions.Configuration.IConfiguration)">
+        <member name="M:NoteManagementAPI.Controllers.Authentication.#ctor(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.AspNetCore.Identity.UserManager{NoteManagementAPI.Models.ApplicationUser},Microsoft.AspNetCore.Identity.SignInManager{NoteManagementAPI.Models.ApplicationUser})">
             <summary>
             Initializes a new instance of the <see cref="T:NoteManagementAPI.Controllers.Authentication"/> controller.
             </summary>
-            <param name="configuration">Application configuration used for authentication settings.</param>
         </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.Authenticate(NoteManagementAPI.Controllers.Authentication.LoginRequest)">
+        <member name="M:NoteManagementAPI.Controllers.Authentication.Register(NoteManagementAPI.DTOs.RegisterRequestDTO)">
             <summary>
-            Authenticates the user by validating credentials and generating a JWT token.
+            Creates a new local user account.
             </summary>
-            <param name="request">The login request containing username and password.</param>
-            <returns>A JWT token as a string if authentication is successful; otherwise, an Unauthorized result.</returns>
+        </member>
+        <member name="M:NoteManagementAPI.Controllers.Authentication.Authenticate(NoteManagementAPI.DTOs.LoginRequestDTO)">
+            <summary>
+            Validates local user credentials and returns a JWT access token.
+            </summary>
         </member>
         <member name="M:NoteManagementAPI.Controllers.NotesController.GetAll(System.String,System.String,System.Int32,System.Int32)">
             <summary>
@@ -101,6 +93,18 @@
             <inheritdoc />
         </member>
         <member name="M:NoteManagementAPI.Migrations.NoteUpdate.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:NoteManagementAPI.Migrations.AddIdentity">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddIdentity.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddIdentity.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddIdentity.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
         <member name="T:Program">
