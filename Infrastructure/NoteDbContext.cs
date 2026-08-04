@@ -12,5 +12,16 @@ namespace NoteManagementAPI.Infrastructure
 
         public DbSet<Note> Notes { get; set; }
         public DbSet<Tag> Tags { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            builder.Entity<Note>()
+                .HasOne(note => note.Owner)
+                .WithMany(user => user.Notes)
+                .HasForeignKey(note => note.OwnerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
     }
 }

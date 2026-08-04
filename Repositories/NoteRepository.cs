@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NoteManagementAPI.Infrastructure;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
@@ -6,7 +6,7 @@ using NoteManagementAPI.Services;
 
 namespace NoteManagementAPI.Repositories
 {
-    public class NoteRepository: INoteRepository
+    public class NoteRepository : INoteRepository
     {
         private readonly NoteDbContext _context;
 
@@ -15,9 +15,10 @@ namespace NoteManagementAPI.Repositories
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<Note?> GetNoteAsync(int noteId, bool includeTags=false)
+        public async Task<Note?> GetNoteAsync(int noteId, string ownerUserId, bool includeTags = false)
         {
-            var query = _context.Notes.Where(note => note.Id == noteId);
+            var query = _context.Notes
+                .Where(note => note.Id == noteId && note.OwnerUserId == ownerUserId);
 
             if (includeTags)
             {
@@ -27,31 +28,35 @@ namespace NoteManagementAPI.Repositories
             return await query.FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<Note>?> GetNotesAsync()
+        public async Task<(IEnumerable<Note> Notes, PaginationMetadata PaginationMetadata)> GetNotesAsync(
+            string ownerUserId,
+            string? title,
+            string? searchQuery,
+            int pageNumber,
+            int pageSize)
         {
-            return await _context.Notes.OrderBy(note => note.Title).ToListAsync();
-        }
-
-        public async Task<(IEnumerable<Note>?, PaginationMetadata)> GetNotesAsync(string? title, string? searchQuery, int pageNumber, int pageSize)
-        {
-            IQueryable<Note> notes = _context.Notes;
+            IQueryable<Note> notes = _context.Notes
+                .AsNoTracking()
+                .Where(note => note.OwnerUserId == ownerUserId);
 
             if (!string.IsNullOrWhiteSpace(title))
             {
                 title = title.Trim();
-                notes = notes.Where(n => n.Title == title);
+                notes = notes.Where(note => note.Title == title);
             }
 
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 searchQuery = searchQuery.Trim();
-                notes = notes.Where(n => n.Content.Contains(searchQuery) || n.Title.Contains(searchQuery));
+                notes = notes.Where(note =>
+                    note.Content.Contains(searchQuery) || note.Title.Contains(searchQuery));
             }
 
             var totalItemCount = await notes.CountAsync();
             var paginationMetadata = new PaginationMetadata(totalItemCount, pageSize, pageNumber);
 
-            var collectionToReturn = await notes.OrderBy(n => n.Title)
+            var collectionToReturn = await notes
+                .OrderBy(note => note.Title)
                 .Skip(pageSize * (pageNumber - 1))
                 .Take(pageSize)
                 .ToListAsync();
@@ -69,22 +74,9 @@ namespace NoteManagementAPI.Repositories
             _context.Notes.Update(noteToUpdate);
         }
 
-        public async Task<bool> DeleteNote(int noteId)
+        public void Delete(Note noteToDelete)
         {
-            Note? noteToDelete = await _context.Notes.FindAsync(noteId);
-
-            if (noteToDelete == null)
-            {
-                return false;
-            }
-
             _context.Notes.Remove(noteToDelete);
-            return true;
-        }
-
-        public async Task<bool> NoteExistsAsync(int noteId)
-        {
-            return await _context.Notes.AnyAsync(note => note.Id == noteId);
         }
     }
 }

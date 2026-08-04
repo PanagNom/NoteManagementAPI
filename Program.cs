@@ -1,8 +1,10 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using NoteManagementAPI.Authorization;
 using NoteManagementAPI.Infrastructure;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Profiles;
@@ -48,6 +50,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddScoped<INoteRepository, NoteRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddSingleton<IAuthorizationHandler, NoteAuthorizationHandler>();
 
 builder.Services.AddAutoMapper(cfg => {
     cfg.AddProfile<NoteProfile>();

@@ -2,9 +2,11 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using NoteManagementAPI.Authorization;
 using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
+using System.Security.Claims;
 using System.Text.Json;
 
 namespace NoteManagementAPI.Controllers
@@ -19,11 +21,16 @@ namespace NoteManagementAPI.Controllers
 
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+        private readonly IAuthorizationService _authorizationService;
 
-        public NotesController(IUnitOfWork unitOfWork, IMapper mapper)
+        public NotesController(
+            IUnitOfWork unitOfWork,
+            IMapper mapper,
+            IAuthorizationService authorizationService)
         {
             _unitOfWork = unitOfWork;
             _mapper = mapper;
+            _authorizationService = authorizationService;
         }
         /// <summary>
         /// 
@@ -54,7 +61,12 @@ namespace NoteManagementAPI.Controllers
                 pageSize = MaxPageSize;
             }
 
-            var (notes, paginationMetadata) = await _unitOfWork.NoteRepository.GetNotesAsync(name, searchQuery, pageNumber, pageSize);
+            var (notes, paginationMetadata) = await _unitOfWork.NoteRepository.GetNotesAsync(
+                GetCurrentUserId(),
+                name,
+                searchQuery,
+                pageNumber,
+                pageSize);
 
             Response.Headers.Append("X-Pagination", JsonSerializer.Serialize(paginationMetadata));
 
@@ -66,11 +78,28 @@ namespace NoteManagementAPI.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult> Get(int id, bool includeTags = false)
         {
-            Note? retrievedNote = await _unitOfWork.NoteRepository.GetNoteAsync(id, includeTags: includeTags);
+            if (id < 1)
+            {
+                return BadRequest("Id must be greater than 0.");
+            }
+
+            Note? retrievedNote = await _unitOfWork.NoteRepository.GetNoteAsync(
+                id,
+                GetCurrentUserId(),
+                includeTags);
 
             if (retrievedNote == null)
             {
                 return NotFound();
+            }
+
+            var authorizationResult = await _authorizationService.AuthorizeAsync(
+                User,
+                retrievedNote,
+                NoteOperations.Read);
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
             }
 
             if (includeTags)
@@ -87,6 +116,7 @@ namespace NoteManagementAPI.Controllers
         public async Task<ActionResult<NoteDTO>> Create(NoteCreationDTO note)
         {
             var noteToCreate = _mapper.Map<Note>(note);
+            noteToCreate.AssignOwner(GetCurrentUserId());
             SetCreationAuditFields(noteToCreate);
 
             var tagResolution = await ResolveTagsAsync(note.Tags);
@@ -117,11 +147,23 @@ namespace NoteManagementAPI.Controllers
                 return BadRequest("Id must be greater than 0.");
             }
 
-            var noteRetrieved = await _unitOfWork.NoteRepository.GetNoteAsync(id, includeTags: true);
+            var noteRetrieved = await _unitOfWork.NoteRepository.GetNoteAsync(
+                id,
+                GetCurrentUserId(),
+                includeTags: true);
 
             if (noteRetrieved == null)
             {
                 return NotFound();
+            }
+
+            var authorizationResult = await _authorizationService.AuthorizeAsync(
+                User,
+                noteRetrieved,
+                NoteOperations.Update);
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
             }
 
             _mapper.Map(note, noteRetrieved);
@@ -152,12 +194,24 @@ namespace NoteManagementAPI.Controllers
                 return BadRequest("Id must be greater than 0.");
             }
 
-            var deleted = await _unitOfWork.NoteRepository.DeleteNote(id);
-            if (!deleted)
+            var noteToDelete = await _unitOfWork.NoteRepository.GetNoteAsync(
+                id,
+                GetCurrentUserId());
+            if (noteToDelete == null)
             {
                 return NotFound();
             }
 
+            var authorizationResult = await _authorizationService.AuthorizeAsync(
+                User,
+                noteToDelete,
+                NoteOperations.Delete);
+            if (!authorizationResult.Succeeded)
+            {
+                return Forbid();
+            }
+
+            _unitOfWork.NoteRepository.Delete(noteToDelete);
             await _unitOfWork.SaveChangesAsync();
 
             return NoContent();
@@ -208,6 +262,12 @@ namespace NoteManagementAPI.Controllers
         private string GetCurrentUserName()
         {
             return User.Identity?.Name ?? "unknown";
+        }
+
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? throw new InvalidOperationException("The authenticated user id claim is missing.");
         }
 
         private string GetRequestedApiVersionValue()

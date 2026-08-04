@@ -107,6 +107,18 @@
         <member name="M:NoteManagementAPI.Migrations.AddIdentity.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
         </member>
+        <member name="T:NoteManagementAPI.Migrations.AddNoteOwnership">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddNoteOwnership.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddNoteOwnership.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddNoteOwnership.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
         <member name="T:Program">
             <summary>
             Auto-generated public partial Program class for top-level statement apps.
