@@ -7,11 +7,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using NoteManagementAPI.Authorization;
+using NoteManagementAPI.Configuration;
 using NoteManagementAPI.Infrastructure;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Profiles;
 using NoteManagementAPI.Repositories;
 using NoteManagementAPI.Repositories.Interfaces;
+using NoteManagementAPI.Services;
 using Serilog;
 using System.Reflection;
 using System.Security.Claims;
@@ -23,9 +25,11 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+var authenticationSettings = JwtAuthenticationSettings.FromConfiguration(builder.Configuration);
 
 // Add services to the container.
 builder.Host.UseSerilog();
+builder.Services.AddSingleton(authenticationSettings);
 
 builder.Services.AddControllers();
 
@@ -53,6 +57,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 builder.Services.AddScoped<INoteRepository, NoteRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IAuthenticationTokenService, AuthenticationTokenService>();
 builder.Services.AddSingleton<IAuthorizationHandler, NoteAuthorizationHandler>();
 builder.Services.AddSingleton<IAuthorizationHandler, TagAuthorizationHandler>();
 
@@ -60,10 +65,6 @@ builder.Services.AddAutoMapper(cfg => {
     cfg.AddProfile<NoteProfile>();
     cfg.AddProfile<TagProfile>();
 });
-
-var authenticationIssuer = builder.Configuration["Authentication:Issuer"] ?? throw new InvalidOperationException("Authentication:Issuer is not configured.");
-var authenticationAudience = builder.Configuration["Authentication:Audience"] ?? throw new InvalidOperationException("Authentication:Audience is not configured.");
-var authenticationSecret = builder.Configuration["Authentication:SecretForKey"] ?? throw new InvalidOperationException("Authentication:SecretForKey is not configured.");
 
 builder.Services.AddAuthentication(options =>
     {
@@ -81,9 +82,9 @@ builder.Services.AddAuthentication(options =>
             ValidateIssuerSigningKey = true,
             RequireExpirationTime = true,
             RequireSignedTokens = true,
-            ValidIssuer = authenticationIssuer,
-            ValidAudience = authenticationAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(authenticationSecret)),
+            ValidIssuer = authenticationSettings.Issuer,
+            ValidAudience = authenticationSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(authenticationSettings.GetSigningKeyBytes()),
             ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
             ClockSkew = TimeSpan.FromMinutes(1),
             NameClaimType = ClaimTypes.Name,

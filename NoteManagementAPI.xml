@@ -9,7 +9,7 @@
             Manages user registration, authentication, and token generation.
             </summary>
         </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.#ctor(Microsoft.Extensions.Configuration.IConfiguration,Microsoft.AspNetCore.Identity.UserManager{NoteManagementAPI.Models.ApplicationUser},Microsoft.AspNetCore.Identity.SignInManager{NoteManagementAPI.Models.ApplicationUser})">
+        <member name="M:NoteManagementAPI.Controllers.Authentication.#ctor(Microsoft.AspNetCore.Identity.UserManager{NoteManagementAPI.Models.ApplicationUser},Microsoft.AspNetCore.Identity.SignInManager{NoteManagementAPI.Models.ApplicationUser},NoteManagementAPI.Services.IAuthenticationTokenService)">
             <summary>
             Initializes a new instance of the <see cref="T:NoteManagementAPI.Controllers.Authentication"/> controller.
             </summary>
@@ -24,6 +24,16 @@
             Validates local user credentials and returns a JWT access token.
             </summary>
         </member>
+        <member name="M:NoteManagementAPI.Controllers.Authentication.Refresh(NoteManagementAPI.DTOs.RefreshTokenRequestDTO)">
+            <summary>
+            Rotates a valid refresh token and returns a new access/refresh token pair.
+            </summary>
+        </member>
+        <member name="M:NoteManagementAPI.Controllers.Authentication.Revoke(NoteManagementAPI.DTOs.RefreshTokenRequestDTO)">
+            <summary>
+            Revokes the refresh-token family for the authenticated session.
+            </summary>
+        </member>
         <member name="M:NoteManagementAPI.Controllers.NotesController.GetAll(System.String,System.String,System.Int32,System.Int32)">
             <summary>
             
@@ -34,6 +44,33 @@
             <param name="pageSize"></param>
             <returns>All notes created.</returns>
             <response code="200">Returns all notes created.</response>
+        </member>
+        <member name="T:NoteManagementAPI.DTOs.RefreshTokenRequestDTO">
+            <summary>
+            Supplies a refresh token for rotation or session revocation.
+            </summary>
+        </member>
+        <member name="P:NoteManagementAPI.DTOs.RefreshTokenRequestDTO.RefreshToken">
+            <summary>
+            Gets or sets the opaque refresh token returned by authentication.
+            </summary>
+        </member>
+        <member name="T:NoteManagementAPI.DTOs.TokenResponseDTO">
+            <summary>
+            Contains a short-lived access token and a one-time refresh token.
+            </summary>
+        </member>
+        <member name="P:NoteManagementAPI.DTOs.TokenResponseDTO.AccessToken">
+            <summary>Gets the JWT used to authorize API requests.</summary>
+        </member>
+        <member name="P:NoteManagementAPI.DTOs.TokenResponseDTO.AccessTokenExpiresAtUtc">
+            <summary>Gets the UTC expiration of the access token.</summary>
+        </member>
+        <member name="P:NoteManagementAPI.DTOs.TokenResponseDTO.RefreshToken">
+            <summary>Gets the opaque one-time token used to renew the session.</summary>
+        </member>
+        <member name="P:NoteManagementAPI.DTOs.TokenResponseDTO.RefreshTokenExpiresAtUtc">
+            <summary>Gets the fixed UTC expiration of the refresh-token family.</summary>
         </member>
         <member name="T:NoteManagementAPI.Migrations.Initial">
             <inheritdoc />
@@ -130,6 +167,32 @@
         </member>
         <member name="M:NoteManagementAPI.Migrations.AddTagOwnership.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
             <inheritdoc />
+        </member>
+        <member name="T:NoteManagementAPI.Migrations.AddRefreshTokens">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddRefreshTokens.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddRefreshTokens.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:NoteManagementAPI.Migrations.AddRefreshTokens.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:NoteManagementAPI.Services.IAuthenticationTokenService">
+            <summary>
+            Issues, rotates, and revokes authentication token pairs.
+            </summary>
+        </member>
+        <member name="M:NoteManagementAPI.Services.IAuthenticationTokenService.IssueTokenPairAsync(NoteManagementAPI.Models.ApplicationUser,System.Threading.CancellationToken)">
+            <summary>Issues a new access/refresh pair for a signed-in user.</summary>
+        </member>
+        <member name="M:NoteManagementAPI.Services.IAuthenticationTokenService.RotateRefreshTokenAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Rotates a valid refresh token, or returns null when it cannot be used.</summary>
+        </member>
+        <member name="M:NoteManagementAPI.Services.IAuthenticationTokenService.RevokeRefreshTokenFamilyAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Revokes a refresh-token family when it belongs to the supplied user.</summary>
         </member>
         <member name="T:Program">
             <summary>

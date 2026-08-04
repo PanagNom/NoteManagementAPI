@@ -13,5 +13,6 @@ namespace NoteManagementAPI.Models
 
         public ICollection<Note> Notes { get; set; } = new List<Note>();
         public ICollection<Tag> Tags { get; set; } = new List<Tag>();
+        internal ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     }
 }

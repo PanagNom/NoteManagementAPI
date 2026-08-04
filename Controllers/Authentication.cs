@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
 using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
-using System.IdentityModel.Tokens.Jwt;
+using NoteManagementAPI.Services;
 using System.Security.Claims;
 
 namespace NoteManagementAPI.Controllers
@@ -16,21 +15,21 @@ namespace NoteManagementAPI.Controllers
     [ApiController]
     public class Authentication : ControllerBase
     {
-        private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly IAuthenticationTokenService _tokenService;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Authentication"/> controller.
         /// </summary>
         public Authentication(
-            IConfiguration configuration,
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager,
+            IAuthenticationTokenService tokenService)
         {
-            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _signInManager = signInManager ?? throw new ArgumentNullException(nameof(signInManager));
+            _tokenService = tokenService ?? throw new ArgumentNullException(nameof(tokenService));
         }
 
         /// <summary>
@@ -69,9 +68,9 @@ namespace NoteManagementAPI.Controllers
         /// </summary>
         [AllowAnonymous]
         [HttpPost("authenticate")]
-        [ProducesResponseType(typeof(string), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(TokenResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult<string>> Authenticate([FromBody] LoginRequestDTO request)
+        public async Task<ActionResult<TokenResponseDTO>> Authenticate([FromBody] LoginRequestDTO request)
         {
             var user = await _userManager.FindByNameAsync(request.Username.Trim());
             if (user == null)
@@ -89,39 +88,54 @@ namespace NoteManagementAPI.Controllers
                 return Unauthorized("Invalid username or password.");
             }
 
-            var securityKey = new SymmetricSecurityKey(
-                Convert.FromBase64String(GetRequiredConfigurationValue("Authentication:SecretForKey")));
-            var signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var claimsForToken = new List<Claim>
-            {
-                new(JwtRegisteredClaimNames.Sub, user.Id),
-                new(ClaimTypes.NameIdentifier, user.Id),
-                new(ClaimTypes.Name, user.UserName!),
-                new(JwtRegisteredClaimNames.GivenName, user.FirstName),
-                new(JwtRegisteredClaimNames.FamilyName, user.LastName),
-                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
-
-            claimsForToken.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-            var now = DateTime.UtcNow;
-            var jwtSecurityToken = new JwtSecurityToken(
-                GetRequiredConfigurationValue("Authentication:Issuer"),
-                GetRequiredConfigurationValue("Authentication:Audience"),
-                claimsForToken,
-                now,
-                now.AddHours(1),
-                signingCredentials);
-
-            return Ok(new JwtSecurityTokenHandler().WriteToken(jwtSecurityToken));
+            var tokenResponse = await _tokenService.IssueTokenPairAsync(
+                user,
+                HttpContext.RequestAborted);
+            return Ok(tokenResponse);
         }
 
-        private string GetRequiredConfigurationValue(string key)
+        /// <summary>
+        /// Rotates a valid refresh token and returns a new access/refresh token pair.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("refresh")]
+        [ProducesResponseType(typeof(TokenResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<TokenResponseDTO>> Refresh(
+            [FromBody] RefreshTokenRequestDTO request)
         {
-            return _configuration[key]
-                ?? throw new InvalidOperationException($"{key} is not configured.");
+            var tokenResponse = await _tokenService.RotateRefreshTokenAsync(
+                request.RefreshToken,
+                HttpContext.RequestAborted);
+
+            if (tokenResponse == null)
+            {
+                return Unauthorized("Invalid refresh token.");
+            }
+
+            return Ok(tokenResponse);
+        }
+
+        /// <summary>
+        /// Revokes the refresh-token family for the authenticated session.
+        /// </summary>
+        [Authorize]
+        [HttpPost("revoke")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        public async Task<IActionResult> Revoke([FromBody] RefreshTokenRequestDTO request)
+        {
+            await _tokenService.RevokeRefreshTokenFamilyAsync(
+                request.RefreshToken,
+                GetCurrentUserId(),
+                HttpContext.RequestAborted);
+
+            return NoContent();
+        }
+
+        private string GetCurrentUserId()
+        {
+            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? throw new InvalidOperationException("The authenticated user id claim is missing.");
         }
     }
 }

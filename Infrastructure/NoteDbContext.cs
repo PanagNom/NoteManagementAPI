@@ -12,6 +12,7 @@ namespace NoteManagementAPI.Infrastructure
 
         public DbSet<Note> Notes { get; set; }
         public DbSet<Tag> Tags { get; set; }
+        internal DbSet<RefreshToken> RefreshTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -32,6 +33,23 @@ namespace NoteManagementAPI.Infrastructure
             builder.Entity<Tag>()
                 .HasIndex(tag => new { tag.OwnerUserId, tag.Name })
                 .IsUnique();
+
+            builder.Entity<RefreshToken>()
+                .HasOne(token => token.User)
+                .WithMany(user => user.RefreshTokens)
+                .HasForeignKey(token => token.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<RefreshToken>()
+                .HasIndex(token => token.TokenHash)
+                .IsUnique();
+
+            builder.Entity<RefreshToken>()
+                .HasIndex(token => new { token.UserId, token.FamilyId });
+
+            builder.Entity<RefreshToken>()
+                .Property(token => token.RowVersion)
+                .IsRowVersion();
         }
     }
 }
