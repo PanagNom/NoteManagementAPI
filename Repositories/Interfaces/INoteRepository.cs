@@ -11,7 +11,7 @@ namespace NoteManagementAPI.Repositories.Interfaces
         Task<(IEnumerable<Note>?, PaginationMetadata)> GetNotesAsync(string? title, string? searchQuery, int pageNumber, int pageSize);
         Task<bool> NoteExistsAsync(int noteId);
         Task Create(Note noteToCreate);
-        Task Update(Note noteToUpdate);
-        Task DeleteNote(int noteId);
+        void Update(Note noteToUpdate);
+        Task<bool> DeleteNote(int noteId);
     }
 }

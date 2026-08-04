@@ -4,6 +4,34 @@
         <name>NoteManagementAPI</name>
     </assembly>
     <members>
+        <member name="T:NoteManagementAPI.Controllers.Authentication">
+            <summary>
+            Manages user authentication, including login and token generation.
+            </summary>
+        </member>
+        <member name="T:NoteManagementAPI.Controllers.Authentication.LoginRequest">
+            <summary>
+            Represents a request to the login action, containing username and password.
+            </summary>
+        </member>
+        <member name="T:NoteManagementAPI.Controllers.Authentication.NotePadUser">
+            <summary>
+            Represents a user in the NotePad system.
+            </summary>
+        </member>
+        <member name="M:NoteManagementAPI.Controllers.Authentication.#ctor(Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Initializes a new instance of the <see cref="T:NoteManagementAPI.Controllers.Authentication"/> controller.
+            </summary>
+            <param name="configuration">Application configuration used for authentication settings.</param>
+        </member>
+        <member name="M:NoteManagementAPI.Controllers.Authentication.Authenticate(NoteManagementAPI.Controllers.Authentication.LoginRequest)">
+            <summary>
+            Authenticates the user by validating credentials and generating a JWT token.
+            </summary>
+            <param name="request">The login request containing username and password.</param>
+            <returns>A JWT token as a string if authentication is successful; otherwise, an Unauthorized result.</returns>
+        </member>
         <member name="M:NoteManagementAPI.Controllers.NotesController.GetAll(System.String,System.String,System.Int32,System.Int32)">
             <summary>
             

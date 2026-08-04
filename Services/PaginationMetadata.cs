@@ -9,6 +9,16 @@
 
         public PaginationMetadata(int totalItemCount, int pageSize, int currentPage)
         {
+            if (pageSize < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be greater than 0.");
+            }
+
+            if (currentPage < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(currentPage), "Current page must be greater than 0.");
+            }
+
             TotalItemCount = totalItemCount;            
             PageSize = pageSize;
             CurrentPage = currentPage;

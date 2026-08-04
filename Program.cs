@@ -1,6 +1,5 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
-using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using NoteManagementAPI.Infrastructure;
@@ -35,6 +34,10 @@ builder.Services.AddAutoMapper(cfg => {
     cfg.AddProfile<TagProfile>();
 });
 
+var authenticationIssuer = builder.Configuration["Authentication:Issuer"] ?? throw new InvalidOperationException("Authentication:Issuer is not configured.");
+var authenticationAudience = builder.Configuration["Authentication:Audience"] ?? throw new InvalidOperationException("Authentication:Audience is not configured.");
+var authenticationSecret = builder.Configuration["Authentication:SecretForKey"] ?? throw new InvalidOperationException("Authentication:SecretForKey is not configured.");
+
 builder.Services.AddAuthentication("Bearer")
     .AddJwtBearer(options =>
     {
@@ -44,11 +47,13 @@ builder.Services.AddAuthentication("Bearer")
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Authentication:Issuer"],
-            ValidAudience = builder.Configuration["Authentication:Audience"],
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Convert.FromBase64String(builder.Configuration["Authentication:SecretForKey"]))
+            ValidIssuer = authenticationIssuer,
+            ValidAudience = authenticationAudience,
+            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Convert.FromBase64String(authenticationSecret)),
+            NameClaimType = System.Security.Claims.ClaimTypes.Name
         };
     });
+builder.Services.AddAuthorization();
 
 builder.Services.AddApiVersioning(setupAction =>
 {

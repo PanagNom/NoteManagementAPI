@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Infrastructure;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
@@ -37,13 +36,13 @@ namespace NoteManagementAPI.Repositories
         {
             IQueryable<Note> notes = _context.Notes;
 
-            if (!string.IsNullOrEmpty(title))
+            if (!string.IsNullOrWhiteSpace(title))
             {
                 title = title.Trim();
                 notes = notes.Where(n => n.Title == title);
             }
 
-            if (!string.IsNullOrEmpty(searchQuery))
+            if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 searchQuery = searchQuery.Trim();
                 notes = notes.Where(n => n.Content.Contains(searchQuery) || n.Title.Contains(searchQuery));
@@ -65,21 +64,22 @@ namespace NoteManagementAPI.Repositories
             await _context.Notes.AddAsync(noteToCreate);
         }
 
-        public async Task Update(Note noteToUpdate)
+        public void Update(Note noteToUpdate)
         {
             _context.Notes.Update(noteToUpdate);
         }
 
-        public async Task DeleteNote(int noteId)
+        public async Task<bool> DeleteNote(int noteId)
         {
             Note? noteToDelete = await _context.Notes.FindAsync(noteId);
 
             if (noteToDelete == null)
             {
-                throw new Exception("Invalid Id");
+                return false;
             }
 
             _context.Notes.Remove(noteToDelete);
+            return true;
         }
 
         public async Task<bool> NoteExistsAsync(int noteId)

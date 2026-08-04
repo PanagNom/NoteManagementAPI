@@ -2,12 +2,10 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Repositories.Interfaces;
 using System.Text.Json;
-using static Azure.Core.HttpHeader;
 
 namespace NoteManagementAPI.Controllers
 {
@@ -17,8 +15,11 @@ namespace NoteManagementAPI.Controllers
     [ApiVersion("1.0")]
     public class NotesController : ControllerBase
     {
+        private const int MaxPageSize = 20;
+
         private readonly IUnitOfWork _unitOfWork;
         private readonly IMapper _mapper;
+
         public NotesController(IUnitOfWork unitOfWork, IMapper mapper)
         {
             _unitOfWork = unitOfWork;
@@ -35,11 +36,22 @@ namespace NoteManagementAPI.Controllers
         /// <response code="200">Returns all notes created.</response>
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<Note>?>> GetAll(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<IEnumerable<NoteDTO>>> GetAll(string? name, string? searchQuery, int pageNumber = 1, int pageSize = 10)
         {
-            if (pageSize > 20) 
+            if (pageNumber < 1)
             {
-                pageSize = 20;
+                return BadRequest("Page number must be greater than 0.");
+            }
+
+            if (pageSize < 1)
+            {
+                return BadRequest("Page size must be greater than 0.");
+            }
+
+            if (pageSize > MaxPageSize)
+            {
+                pageSize = MaxPageSize;
             }
 
             var (notes, paginationMetadata) = await _unitOfWork.NoteRepository.GetNotesAsync(name, searchQuery, pageNumber, pageSize);
@@ -52,7 +64,7 @@ namespace NoteManagementAPI.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<Note>> Get(int id, bool includeTags = false)
+        public async Task<ActionResult> Get(int id, bool includeTags = false)
         {
             Note? retrievedNote = await _unitOfWork.NoteRepository.GetNoteAsync(id, includeTags: includeTags);
 
@@ -70,36 +82,42 @@ namespace NoteManagementAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<Note>> Create(NoteCreationDTO note)
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<NoteDTO>> Create(NoteCreationDTO note)
         {
             var noteToCreate = _mapper.Map<Note>(note);
-            baseAttributesFill(noteToCreate);
-            
-            if(note.Tags != null && note.Tags.Any())
+            SetCreationAuditFields(noteToCreate);
+
+            var tagResolution = await ResolveTagsAsync(note.Tags);
+            if (tagResolution.MissingTagIds.Any())
             {
-                var tagList = note.Tags.ToList();
-                List<Tag> noteTags = new List<Tag>();
-                foreach (var tag in tagList)
-                {
-                    var tagToAdd = await _unitOfWork.TagRepository.GetTagAsync(tag.Id);
-                    if (tagToAdd != null) 
-                    {
-                        noteTags.Add(tagToAdd);
-                    }
-                }
-                noteToCreate.Tags = noteTags;
+                return BadRequest($"The following tag ids do not exist: {string.Join(", ", tagResolution.MissingTagIds)}");
             }
+
+            noteToCreate.Tags = tagResolution.Tags;
+
             await _unitOfWork.NoteRepository.Create(noteToCreate);
             await _unitOfWork.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(Get), new { Id = noteToCreate.Id }, _mapper.Map<NoteDTO>(noteToCreate));
+            return CreatedAtAction(
+                nameof(Get),
+                new { id = noteToCreate.Id, version = GetRequestedApiVersionValue() },
+                _mapper.Map<NoteDTO>(noteToCreate));
         }
 
         [HttpPut("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Put(int id, NoteUpdateDTO note)
         {
-            var noteRetrieved = await _unitOfWork.NoteRepository.GetNoteAsync(id);
+            if (id < 1)
+            {
+                return BadRequest("Id must be greater than 0.");
+            }
+
+            var noteRetrieved = await _unitOfWork.NoteRepository.GetNoteAsync(id, includeTags: true);
 
             if (noteRetrieved == null)
             {
@@ -108,25 +126,16 @@ namespace NoteManagementAPI.Controllers
 
             _mapper.Map(note, noteRetrieved);
 
-            if (note.Tags != null && note.Tags.Any())
+            var tagResolution = await ResolveTagsAsync(note.Tags);
+            if (tagResolution.MissingTagIds.Any())
             {
-                var tagList = note.Tags.ToList();
-                List<Tag> noteTags = new List<Tag>();
-                foreach (var tag in tagList)
-                {
-                    var tagToAdd = await _unitOfWork.TagRepository.GetTagAsync(tag.Id);
-                    if (tagToAdd != null)
-                    {
-                        noteTags.Add(tagToAdd);
-                    }
-                }
-                noteRetrieved.Tags = noteTags;
+                return BadRequest($"The following tag ids do not exist: {string.Join(", ", tagResolution.MissingTagIds)}");
             }
-            else
-            {
-                noteRetrieved.Tags = null;
-            }
-            await _unitOfWork.NoteRepository.Update(noteRetrieved);
+
+            noteRetrieved.Tags = tagResolution.Tags;
+            SetModificationAuditFields(noteRetrieved);
+
+            _unitOfWork.NoteRepository.Update(noteRetrieved);
             await _unitOfWork.SaveChangesAsync();
 
             return NoContent();
@@ -134,15 +143,17 @@ namespace NoteManagementAPI.Controllers
 
         [HttpDelete("{id:int}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            if (id < 1)
             {
-                await _unitOfWork.NoteRepository.DeleteNote(id);
-
+                return BadRequest("Id must be greater than 0.");
             }
-            catch (Exception)
+
+            var deleted = await _unitOfWork.NoteRepository.DeleteNote(id);
+            if (!deleted)
             {
                 return NotFound();
             }
@@ -151,13 +162,57 @@ namespace NoteManagementAPI.Controllers
 
             return NoContent();
         }
-    
-        private void baseAttributesFill(Note note)
+
+        private async Task<(List<Tag> Tags, List<int> MissingTagIds)> ResolveTagsAsync(IEnumerable<TagInNoteDTO>? tagReferences)
         {
-            note.CreatedAt = DateTime.UtcNow;
+            var tags = new List<Tag>();
+            var missingTagIds = new List<int>();
+
+            if (tagReferences == null)
+            {
+                return (tags, missingTagIds);
+            }
+
+            foreach (var tagId in tagReferences.Select(tag => tag.Id).Distinct())
+            {
+                var tagToAdd = await _unitOfWork.TagRepository.GetTagAsync(tagId);
+                if (tagToAdd == null)
+                {
+                    missingTagIds.Add(tagId);
+                    continue;
+                }
+
+                tags.Add(tagToAdd);
+            }
+
+            return (tags, missingTagIds);
+        }
+
+        private void SetCreationAuditFields(Note note)
+        {
+            var now = DateTime.UtcNow;
+            var userName = GetCurrentUserName();
+
+            note.CreatedAt = now;
+            note.ModifiedAt = now;
+            note.CreatedBy = userName;
+            note.ModifiedBy = userName;
+        }
+
+        private void SetModificationAuditFields(Note note)
+        {
             note.ModifiedAt = DateTime.UtcNow;
-            note.CreatedBy = User.Identity?.Name ?? "CreateTest";
-            note.ModifiedBy = User.Identity?.Name ?? "CreateTest";
+            note.ModifiedBy = GetCurrentUserName();
+        }
+
+        private string GetCurrentUserName()
+        {
+            return User.Identity?.Name ?? "unknown";
+        }
+
+        private string GetRequestedApiVersionValue()
+        {
+            return RouteData.Values["version"]?.ToString() ?? "1.0";
         }
     }
 }
