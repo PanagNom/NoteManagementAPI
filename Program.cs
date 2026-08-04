@@ -15,6 +15,8 @@ using NoteManagementAPI.Repositories;
 using NoteManagementAPI.Repositories.Interfaces;
 using NoteManagementAPI.Services;
 using Serilog;
+using Swashbuckle.AspNetCore.SwaggerGen;
+using Swashbuckle.AspNetCore.SwaggerUI;
 using System.Reflection;
 using System.Security.Claims;
 
@@ -112,38 +114,42 @@ builder.Services.AddApiVersioning(setupAction =>
 
 builder.Services.AddEndpointsApiExplorer();
 
-var apiVersionDescriptionProvider = builder.Services.BuildServiceProvider().GetRequiredService<IApiVersionDescriptionProvider>();
-
-builder.Services.AddSwaggerGen(setupAction =>
+builder.Services.AddSwaggerGen();
+builder.Services.Configure<SwaggerUIOptions>(options =>
 {
-    foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
-    {
-        setupAction.SwaggerDoc(description.GroupName, new()
-        {
-            Title = $"Note Management API {description.ApiVersion}",
-            Version = description.ApiVersion.ToString()
-        });
-    }
-    var xmlCommentsFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlCommentsFullPath = Path.Combine(AppContext.BaseDirectory, xmlCommentsFile);
-
-    setupAction.IncludeXmlComments(xmlCommentsFullPath);
-    setupAction.AddSecurityDefinition("NoteManagementBearerAuth", new OpenApiSecurityScheme
-    {
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
-    });
-
-    setupAction.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecuritySchemeReference("NoteManagementBearerAuth", document, null),
-            new List<string>()
-        }
-    });
+    options.SwaggerEndpoint("/openapi/1.0.json", "1.0");
 });
+builder.Services.AddOptions<SwaggerGenOptions>()
+    .Configure<IApiVersionDescriptionProvider>((setupAction, apiVersionDescriptionProvider) =>
+    {
+        foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+        {
+            setupAction.SwaggerDoc(description.GroupName, new()
+            {
+                Title = $"Note Management API {description.ApiVersion}",
+                Version = description.ApiVersion.ToString()
+            });
+        }
+        var xmlCommentsFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+        var xmlCommentsFullPath = Path.Combine(AppContext.BaseDirectory, xmlCommentsFile);
+
+        setupAction.IncludeXmlComments(xmlCommentsFullPath);
+        setupAction.AddSecurityDefinition("NoteManagementBearerAuth", new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\""
+        });
+
+        setupAction.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecuritySchemeReference("NoteManagementBearerAuth", document, null),
+                new List<string>()
+            }
+        });
+    });
 
 var app = builder.Build();
 
@@ -155,14 +161,7 @@ if (app.Environment.IsDevelopment())
         options.RouteTemplate = "openapi/{documentName}.json";
     });
 
-    app.UseSwaggerUI(options =>
-    {
-        var descriptions = app.DescribeApiVersions();
-        foreach(var description in descriptions)
-        {
-            options.SwaggerEndpoint($"/openapi/{description.GroupName}.json", description.GroupName.ToUpperInvariant());
-        }
-    });
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
