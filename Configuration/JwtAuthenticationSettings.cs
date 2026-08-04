@@ -51,27 +51,22 @@ namespace NoteManagementAPI.Configuration
             }
             catch (FormatException exception)
             {
-                throw new InvalidOperationException(
-                    $"{SectionName}:{nameof(SecretForKey)} must be a Base64-encoded key.",
-                    exception);
+                throw new InvalidOperationException($"{SectionName}:{nameof(SecretForKey)} must be a Base64-encoded key.", exception);
             }
 
             if (signingKey.Length < 32)
             {
-                throw new InvalidOperationException(
-                    $"{SectionName}:{nameof(SecretForKey)} must contain at least 32 bytes.");
+                throw new InvalidOperationException($"{SectionName}:{nameof(SecretForKey)} must contain at least 32 bytes.");
             }
 
             if (AccessTokenLifetimeMinutes is < 5 or > 60)
             {
-                throw new InvalidOperationException(
-                    $"{SectionName}:{nameof(AccessTokenLifetimeMinutes)} must be between 5 and 60.");
+                throw new InvalidOperationException($"{SectionName}:{nameof(AccessTokenLifetimeMinutes)} must be between 5 and 60.");
             }
 
             if (RefreshTokenLifetimeDays is < 1 or > 30)
             {
-                throw new InvalidOperationException(
-                    $"{SectionName}:{nameof(RefreshTokenLifetimeDays)} must be between 1 and 30.");
+                throw new InvalidOperationException($"{SectionName}:{nameof(RefreshTokenLifetimeDays)} must be between 1 and 30.");
             }
         }
     }
