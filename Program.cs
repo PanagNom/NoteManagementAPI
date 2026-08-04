@@ -1,8 +1,10 @@
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using NoteManagementAPI.Authorization;
 using NoteManagementAPI.Infrastructure;
@@ -12,6 +14,7 @@ using NoteManagementAPI.Repositories;
 using NoteManagementAPI.Repositories.Interfaces;
 using Serilog;
 using System.Reflection;
+using System.Security.Claims;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
@@ -62,22 +65,37 @@ var authenticationIssuer = builder.Configuration["Authentication:Issuer"] ?? thr
 var authenticationAudience = builder.Configuration["Authentication:Audience"] ?? throw new InvalidOperationException("Authentication:Audience is not configured.");
 var authenticationSecret = builder.Configuration["Authentication:SecretForKey"] ?? throw new InvalidOperationException("Authentication:SecretForKey is not configured.");
 
-builder.Services.AddAuthentication("Bearer")
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            RequireExpirationTime = true,
+            RequireSignedTokens = true,
             ValidIssuer = authenticationIssuer,
             ValidAudience = authenticationAudience,
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Convert.FromBase64String(authenticationSecret)),
-            NameClaimType = System.Security.Claims.ClaimTypes.Name
+            IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(authenticationSecret)),
+            ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
+            ClockSkew = TimeSpan.FromMinutes(1),
+            NameClaimType = ClaimTypes.Name,
+            RoleClaimType = ClaimTypes.Role
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = new AuthorizationPolicyBuilder(JwtBearerDefaults.AuthenticationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 builder.Services.AddApiVersioning(setupAction =>
 {
