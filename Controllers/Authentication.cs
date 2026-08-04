@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using NoteManagementAPI.Configuration;
 using NoteManagementAPI.DTOs;
 using NoteManagementAPI.Models;
 using NoteManagementAPI.Services;
@@ -36,9 +38,11 @@ namespace NoteManagementAPI.Controllers
         /// Creates a new local user account.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthenticationRateLimitPolicies.Registration)]
         [HttpPost("register")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO request)
         {
             var user = new ApplicationUser
@@ -67,9 +71,11 @@ namespace NoteManagementAPI.Controllers
         /// Validates local user credentials and returns a JWT access token.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthenticationRateLimitPolicies.Login)]
         [HttpPost("authenticate")]
         [ProducesResponseType(typeof(TokenResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
         public async Task<ActionResult<TokenResponseDTO>> Authenticate([FromBody] LoginRequestDTO request)
         {
             var user = await _userManager.FindByNameAsync(request.Username.Trim());
@@ -98,9 +104,11 @@ namespace NoteManagementAPI.Controllers
         /// Rotates a valid refresh token and returns a new access/refresh token pair.
         /// </summary>
         [AllowAnonymous]
+        [EnableRateLimiting(AuthenticationRateLimitPolicies.Refresh)]
         [HttpPost("refresh")]
         [ProducesResponseType(typeof(TokenResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
         public async Task<ActionResult<TokenResponseDTO>> Refresh(
             [FromBody] RefreshTokenRequestDTO request)
         {

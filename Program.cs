@@ -97,6 +97,7 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
 });
+builder.Services.AddAuthenticationRateLimiting();
 
 builder.Services.AddApiVersioning(setupAction =>
 {
@@ -168,6 +169,7 @@ app.UseHttpsRedirection();
 
 app.UseRouting();
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
