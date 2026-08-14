@@ -81,10 +81,7 @@ namespace NoteManagementAPI.Controllers
                 return Unauthorized("Invalid username or password.");
             }
 
-            var signInResult = await _signInManager.CheckPasswordSignInAsync(
-                user,
-                request.Password,
-                lockoutOnFailure: true);
+            var signInResult = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
 
             if (!signInResult.Succeeded)
             {
@@ -104,17 +101,11 @@ namespace NoteManagementAPI.Controllers
         [ProducesResponseType(typeof(TokenResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
-        public async Task<ActionResult<TokenResponseDTO>> Refresh(
-            [FromBody] RefreshTokenRequestDTO request)
+        public async Task<ActionResult<TokenResponseDTO>> Refresh([FromBody] RefreshTokenRequestDTO request)
         {
             var tokenResponse = await _tokenService.RotateRefreshTokenAsync(request.RefreshToken, HttpContext.RequestAborted);
 
-            if (tokenResponse == null)
-            {
-                return Unauthorized("Invalid refresh token.");
-            }
-
-            return Ok(tokenResponse);
+            return tokenResponse == null ? (ActionResult<TokenResponseDTO>)Unauthorized("Invalid refresh token.") : (ActionResult<TokenResponseDTO>)Ok(tokenResponse);
         }
 
         /// <summary>
