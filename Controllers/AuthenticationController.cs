@@ -15,16 +15,16 @@ namespace NoteManagementAPI.Controllers
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
-    public class Authentication : ControllerBase
+    public class AuthenticationController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IAuthenticationTokenService _tokenService;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Authentication"/> controller.
+        /// Initializes a new instance of the <see cref="AuthenticationController"/> controller.
         /// </summary>
-        public Authentication(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IAuthenticationTokenService tokenService)
+        public AuthenticationController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IAuthenticationTokenService tokenService)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _signInManager = signInManager ?? throw new ArgumentNullException(nameof(signInManager));

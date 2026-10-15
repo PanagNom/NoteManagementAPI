@@ -17,8 +17,7 @@ namespace NoteManagementAPI.Repositories
 
         public async Task<Note?> GetNoteAsync(int noteId, string ownerUserId, bool includeTags = false)
         {
-            var query = _context.Notes
-                .Where(note => note.Id == noteId && note.OwnerUserId == ownerUserId);
+            var query = _context.Notes.Where(note => note.Id == noteId && note.OwnerUserId == ownerUserId);
 
             if (includeTags)
             {
@@ -28,12 +27,7 @@ namespace NoteManagementAPI.Repositories
             return await query.FirstOrDefaultAsync();
         }
 
-        public async Task<(IEnumerable<Note> Notes, PaginationMetadata PaginationMetadata)> GetNotesAsync(
-            string ownerUserId,
-            string? title,
-            string? searchQuery,
-            int pageNumber,
-            int pageSize)
+        public async Task<(IEnumerable<Note> Notes, PaginationMetadata PaginationMetadata)> GetNotesAsync( string ownerUserId, string? title, string? searchQuery, int pageNumber, int pageSize)
         {
             IQueryable<Note> notes = _context.Notes
                 .AsNoTracking()
@@ -48,8 +42,7 @@ namespace NoteManagementAPI.Repositories
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 searchQuery = searchQuery.Trim();
-                notes = notes.Where(note =>
-                    note.Content.Contains(searchQuery) || note.Title.Contains(searchQuery));
+                notes = notes.Where(note => note.Content.Contains(searchQuery) || note.Title.Contains(searchQuery));
             }
 
             var totalItemCount = await notes.CountAsync();

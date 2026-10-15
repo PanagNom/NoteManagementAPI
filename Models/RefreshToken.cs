@@ -8,12 +8,7 @@ namespace NoteManagementAPI.Models
         {
         }
 
-        public RefreshToken(
-            string tokenHash,
-            string userId,
-            Guid familyId,
-            DateTimeOffset createdAtUtc,
-            DateTimeOffset expiresAtUtc)
+        public RefreshToken(string tokenHash, string userId, Guid familyId, DateTimeOffset createdAtUtc, DateTimeOffset expiresAtUtc)
         {
             if (string.IsNullOrWhiteSpace(tokenHash))
             {

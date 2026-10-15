@@ -44,9 +44,7 @@ namespace NoteManagementAPI.Services
         public async Task<TokenResponseDTO?> RotateRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken)
         {
             var tokenHash = HashRefreshToken(refreshToken);
-            var currentToken = await _context.RefreshTokens
-                .Include(token => token.User)
-                .SingleOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken);
+            var currentToken = await _context.RefreshTokens.Include(token => token.User).SingleOrDefaultAsync(token => token.TokenHash == tokenHash, cancellationToken);
 
             if (currentToken == null)
             {
@@ -138,8 +136,7 @@ namespace NoteManagementAPI.Services
 
         private static RefreshTokenIssue CreateRefreshToken(string userId, Guid familyId, DateTimeOffset createdAtUtc, DateTimeOffset expiresAtUtc)
         {
-            var rawToken = Base64UrlEncoder.Encode(
-                RandomNumberGenerator.GetBytes(RefreshTokenByteLength));
+            var rawToken = Base64UrlEncoder.Encode( RandomNumberGenerator.GetBytes(RefreshTokenByteLength));
             var entity = new RefreshToken(HashRefreshToken(rawToken), userId, familyId, createdAtUtc, expiresAtUtc);
 
             return new RefreshTokenIssue(rawToken, entity);
