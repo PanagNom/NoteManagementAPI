@@ -4,32 +4,32 @@
         <name>NoteManagementAPI</name>
     </assembly>
     <members>
-        <member name="T:NoteManagementAPI.Controllers.Authentication">
+        <member name="T:NoteManagementAPI.Controllers.AuthenticationController">
             <summary>
             Manages user registration, authentication, and token generation.
             </summary>
         </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.#ctor(Microsoft.AspNetCore.Identity.UserManager{NoteManagementAPI.Models.ApplicationUser},Microsoft.AspNetCore.Identity.SignInManager{NoteManagementAPI.Models.ApplicationUser},NoteManagementAPI.Services.IAuthenticationTokenService)">
+        <member name="M:NoteManagementAPI.Controllers.AuthenticationController.#ctor(Microsoft.AspNetCore.Identity.UserManager{NoteManagementAPI.Models.ApplicationUser},Microsoft.AspNetCore.Identity.SignInManager{NoteManagementAPI.Models.ApplicationUser},NoteManagementAPI.Services.IAuthenticationTokenService)">
             <summary>
-            Initializes a new instance of the <see cref="T:NoteManagementAPI.Controllers.Authentication"/> controller.
+            Initializes a new instance of the <see cref="T:NoteManagementAPI.Controllers.AuthenticationController"/> controller.
             </summary>
         </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.Register(NoteManagementAPI.DTOs.RegisterRequestDTO)">
+        <member name="M:NoteManagementAPI.Controllers.AuthenticationController.Register(NoteManagementAPI.DTOs.RegisterRequestDTO)">
             <summary>
             Creates a new local user account.
             </summary>
         </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.Authenticate(NoteManagementAPI.DTOs.LoginRequestDTO)">
+        <member name="M:NoteManagementAPI.Controllers.AuthenticationController.Authenticate(NoteManagementAPI.DTOs.LoginRequestDTO)">
             <summary>
             Validates local user credentials and returns a JWT access token.
             </summary>
         </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.Refresh(NoteManagementAPI.DTOs.RefreshTokenRequestDTO)">
+        <member name="M:NoteManagementAPI.Controllers.AuthenticationController.Refresh(NoteManagementAPI.DTOs.RefreshTokenRequestDTO)">
             <summary>
             Rotates a valid refresh token and returns a new access/refresh token pair.
             </summary>
         </member>
-        <member name="M:NoteManagementAPI.Controllers.Authentication.Revoke(NoteManagementAPI.DTOs.RefreshTokenRequestDTO)">
+        <member name="M:NoteManagementAPI.Controllers.AuthenticationController.Revoke(NoteManagementAPI.DTOs.RefreshTokenRequestDTO)">
             <summary>
             Revokes the refresh-token family for the authenticated session.
             </summary>
